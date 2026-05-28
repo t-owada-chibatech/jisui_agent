@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import {
@@ -23,14 +24,14 @@ export function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 h-full w-60 bg-white border-r border-gray-100 flex flex-col z-20">
-      <div className="px-6 py-5 border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🍳</span>
-          <div>
-            <h1 className="text-sm font-bold text-gray-900">自炊アシスタント</h1>
-            <p className="text-xs text-gray-400">食費を賢く節約</p>
-          </div>
-        </div>
+      <div className="px-5 py-4 border-b border-gray-100">
+        <Image
+          src="/logo.svg"
+          alt="Jisui Agent"
+          width={190}
+          height={45}
+          priority
+        />
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map(({ href, label, icon: Icon }) => {

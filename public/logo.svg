@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 90" width="380" height="90">
+
+  <!-- Icon background -->
+  <circle cx="45" cy="45" r="40" fill="#FFF8EE"/>
+  <circle cx="45" cy="45" r="40" fill="none" stroke="#FFE0B2" stroke-width="1.5"/>
+
+  <!-- Cat ears (behind hat) -->
+  <polygon points="27,49 19,27 38,44" fill="#F5A623"/>
+  <polygon points="63,49 71,27 52,44" fill="#F5A623"/>
+  <polygon points="29,47 23,32 37,43" fill="#FFCC80"/>
+  <polygon points="61,47 67,32 53,43" fill="#FFCC80"/>
+
+  <!-- Chef hat crown -->
+  <rect x="30" y="17" width="30" height="16" fill="white" stroke="#E8E8E8" stroke-width="1"/>
+  <ellipse cx="45" cy="17" rx="15" ry="6" fill="white" stroke="#E8E8E8" stroke-width="1"/>
+  <!-- Chef hat brim -->
+  <rect x="24" y="31" width="42" height="7" rx="3.5" fill="white" stroke="#E8E8E8" stroke-width="1"/>
+
+  <!-- Cat head -->
+  <circle cx="45" cy="56" r="26" fill="#F5A623"/>
+
+  <!-- Tabby stripe markings -->
+  <path d="M40,38 Q41,34 42,38" stroke="#D4861A" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M45,36 Q45,32 45,36" stroke="#D4861A" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M48,38 Q49,34 50,38" stroke="#D4861A" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+
+  <!-- Eyes -->
+  <ellipse cx="36" cy="54" rx="6.5" ry="7.5" fill="#43A047"/>
+  <ellipse cx="54" cy="54" rx="6.5" ry="7.5" fill="#43A047"/>
+  <ellipse cx="36" cy="55" rx="3.5" ry="5.5" fill="#1B2A1B"/>
+  <ellipse cx="54" cy="55" rx="3.5" ry="5.5" fill="#1B2A1B"/>
+  <circle cx="38" cy="51.5" r="2" fill="white"/>
+  <circle cx="56" cy="51.5" r="2" fill="white"/>
+
+  <!-- Cheek blush -->
+  <ellipse cx="28" cy="59" rx="5.5" ry="3.5" fill="#FFAB91" opacity="0.5"/>
+  <ellipse cx="62" cy="59" rx="5.5" ry="3.5" fill="#FFAB91" opacity="0.5"/>
+
+  <!-- Nose -->
+  <ellipse cx="45" cy="62" rx="3" ry="2.2" fill="#FF7043"/>
+
+  <!-- Mouth -->
+  <path d="M40,65 Q45,70 50,65" fill="none" stroke="#8D5A3C" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Whiskers -->
+  <line x1="19" y1="60" x2="37" y2="62" stroke="#8D5A3C" stroke-width="1.1" stroke-linecap="round" opacity="0.6"/>
+  <line x1="19" y1="64" x2="37" y2="64" stroke="#8D5A3C" stroke-width="1.1" stroke-linecap="round" opacity="0.6"/>
+  <line x1="53" y1="62" x2="71" y2="60" stroke="#8D5A3C" stroke-width="1.1" stroke-linecap="round" opacity="0.6"/>
+  <line x1="53" y1="64" x2="71" y2="64" stroke="#8D5A3C" stroke-width="1.1" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Green cooking spoon accent -->
+  <circle cx="78" cy="72" r="4.5" fill="none" stroke="#43A047" stroke-width="2.2"/>
+  <line x1="78" y1="76.5" x2="78" y2="87" stroke="#43A047" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- ── Text section ── -->
+
+  <!-- App name -->
+  <text
+    x="100" y="50"
+    font-family="'Helvetica Neue', Arial, sans-serif"
+    font-size="32"
+    font-weight="800"
+    fill="#1A1A1A"
+    letter-spacing="0.5"
+  >Jisui Agent</text>
+
+  <!-- Green accent line -->
+  <rect x="100" y="57" width="264" height="3" rx="1.5" fill="#43A047"/>
+
+  <!-- Tagline -->
+  <text
+    x="102" y="75"
+    font-family="'Helvetica Neue', Arial, 'Hiragino Sans', 'Yu Gothic', sans-serif"
+    font-size="13"
+    fill="#9E9E9E"
+    letter-spacing="2.5"
+  >自炊支援アシスタント</text>
+
+</svg>
