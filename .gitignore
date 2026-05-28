@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
+
+# Playwright (test tool, not needed in repo)
+/playwright-report/
+/test-results/
