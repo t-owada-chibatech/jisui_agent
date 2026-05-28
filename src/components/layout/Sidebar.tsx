@@ -9,6 +9,7 @@ import {
   ChefHat,
   ShoppingCart,
   Wallet,
+  ScanLine,
 } from "lucide-react";
 
 const navItems = [
@@ -17,6 +18,7 @@ const navItems = [
   { href: "/recipes", label: "レシピ提案", icon: ChefHat },
   { href: "/shopping", label: "買い物リスト", icon: ShoppingCart },
   { href: "/budget", label: "家計簿", icon: Wallet },
+  { href: "/receipt", label: "レシート取込", icon: ScanLine },
 ];
 
 export function Sidebar() {

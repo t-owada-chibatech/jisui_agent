@@ -103,6 +103,41 @@ export interface AISuggestedIngredient {
   savingReason: string;
 }
 
+export type ReceiptItemCategory =
+  | "vegetable"
+  | "meat"
+  | "fish"
+  | "egg_dairy"
+  | "staple_food"
+  | "seasoning"
+  | "drink"
+  | "snack"
+  | "frozen_food"
+  | "daily_goods"
+  | "other";
+
+export interface ReceiptItemDraft {
+  id: string;
+  itemName: string;
+  normalizedName?: string;
+  price?: number;
+  quantity?: number;
+  unit?: string;
+  category: ReceiptItemCategory;
+  isFood: boolean;
+  addToInventory: boolean;
+  estimatedExpireDays?: number;
+}
+
+export interface ReceiptDraft {
+  id: string;
+  storeName?: string;
+  purchasedAt?: string;
+  totalAmount?: number;
+  rawText?: string;
+  items: ReceiptItemDraft[];
+}
+
 export interface DashboardStats {
   monthlySpent: number;
   monthlyBudget: number;
