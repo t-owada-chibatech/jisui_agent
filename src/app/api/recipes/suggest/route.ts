@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@supabase/supabase-js";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -58,16 +58,13 @@ ${constraints ? `【条件】\n${constraints}` : ""}
 - 持っている食材をできるだけ活用すること
 - 賞味期限が近い食材を優先すること
 - 不足している食材は最小限にすること
-- JSONのみ返すこと（説明文不要）`;
+- JSONのみ返すこと（説明文・コードブロック記号不要）`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2000,
-      messages: [{ role: "user", content: prompt }],
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
 
-    const text = message.content[0].type === "text" ? message.content[0].text : "";
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       return NextResponse.json({ error: "レシピの生成に失敗しました" }, { status: 500 });
@@ -77,7 +74,6 @@ ${constraints ? `【条件】\n${constraints}` : ""}
     const savedRecipes = [];
 
     for (const recipe of generatedRecipes) {
-      // recipes テーブルに保存
       const { data: savedRecipe, error: recipeErr } = await supabase
         .from("recipes")
         .insert({
@@ -93,7 +89,6 @@ ${constraints ? `【条件】\n${constraints}` : ""}
 
       if (recipeErr || !savedRecipe) continue;
 
-      // recipe_ingredients に保存
       if (recipe.ingredients?.length > 0) {
         await supabase.from("recipe_ingredients").insert(
           recipe.ingredients.map((ing: Record<string, unknown>) => ({
@@ -106,7 +101,6 @@ ${constraints ? `【条件】\n${constraints}` : ""}
         );
       }
 
-      // recipe_steps に保存
       if (recipe.steps?.length > 0) {
         await supabase.from("recipe_steps").insert(
           recipe.steps.map((step: Record<string, unknown>) => ({
@@ -120,7 +114,6 @@ ${constraints ? `【条件】\n${constraints}` : ""}
       savedRecipes.push(savedRecipe.id);
     }
 
-    // 保存したレシピを関連データと一緒に取得
     const { data: recipes } = await supabase
       .from("recipes")
       .select("*, recipe_ingredients(*), recipe_steps(*)")

@@ -9,7 +9,7 @@
 | 機能 | 概要 | 状態 |
 |------|------|------|
 | 食材管理 | 食材・賞味期限・価格を登録 | ✅ 実装済み |
-| AI レシピ提案 | 登録食材をもとにClaude APIがレシピを生成 | ✅ 実装済み |
+| AI レシピ提案 | 登録食材をもとにGemini APIがレシピを生成 | ✅ 実装済み |
 | 買い物リスト | 不足食材を優先度付きで管理 | ✅ 実装済み |
 | 家計簿 | 食費の記録・月次/週次集計 | ✅ 実装済み |
 | ダッシュボード | 予算・期限・レシピを一覧表示 | ✅ 実装済み |
@@ -19,7 +19,7 @@
 
 - **フロントエンド**: Next.js 16 (App Router) / TypeScript / Tailwind CSS
 - **バックエンド**: Supabase (PostgreSQL)
-- **AI**: Claude API (claude-sonnet-4-6)
+- **AI**: Google Gemini API (gemini-1.5-flash)
 
 ## セットアップ
 
@@ -40,7 +40,7 @@ cp .env.example .env.local
 
 | 変数名 | 取得先 |
 |--------|--------|
-| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) |
+| `GEMINI_API_KEY` | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API |
 
