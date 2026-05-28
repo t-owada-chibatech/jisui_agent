@@ -29,18 +29,26 @@ export async function POST(req: NextRequest) {
     dislikedIngredients?.length ? `使いたくない食材: ${dislikedIngredients.join("、")}` : null,
   ].filter(Boolean).join("\n");
 
-  const prompt = `あなたは料理の専門家です。以下の食材を使って作れるレシピを3つ提案してください。
+  const prompt = `あなたは一人暮らしの大学生向け料理アドバイザーです。以下の食材を使って作れる、初心者でも絶対に失敗しない超簡単なレシピを3つ提案してください。
 
 【現在持っている食材】
 ${ingredientList}
 
 ${constraints ? `【条件】\n${constraints}` : ""}
 
+【絶対に守るルール】
+- 調理手順は5ステップ以内
+- 包丁をほぼ使わなくてよいか、切り方が超簡単なもの
+- フライパンか鍋1つで完結するもの（洗い物を減らす）
+- 調理時間は20分以内を優先
+- 特別な調理技術・知識が不要（炒める・茹でる・混ぜるだけ）
+- 食費を抑えられるシンプルな料理
+
 以下のJSON形式で回答してください。必ず配列形式で3つのレシピを返してください:
 [
   {
     "title": "レシピ名",
-    "description": "一言説明",
+    "description": "一言説明（「〇〇を炒めるだけ！」など簡単さが伝わる表現で）",
     "cookTimeMin": 調理時間（分）,
     "estimatedCost": 目安費用（円）,
     "genre": "和食|洋食|中華|イタリアン|その他",
@@ -49,7 +57,7 @@ ${constraints ? `【条件】\n${constraints}` : ""}
       { "ingredientName": "食材名", "quantity": 数量, "unit": "単位", "isOptional": false }
     ],
     "steps": [
-      { "stepOrder": 1, "description": "手順の説明" }
+      { "stepOrder": 1, "description": "手順の説明（初心者でもわかる具体的な表現で）" }
     ]
   }
 ]
