@@ -90,6 +90,19 @@ export interface ShoppingItem {
   createdAt: string;
 }
 
+export type SuggestionPriority = "high" | "medium" | "low";
+
+export interface AISuggestedIngredient {
+  id: string;
+  name: string;
+  estimatedPrice: number;
+  priority: SuggestionPriority;
+  reason: string;
+  recipesCanMake: string[];
+  compatibleWith: string[];
+  savingReason: string;
+}
+
 export interface DashboardStats {
   monthlySpent: number;
   monthlyBudget: number;
