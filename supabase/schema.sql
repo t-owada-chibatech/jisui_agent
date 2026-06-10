@@ -14,6 +14,7 @@ CREATE TABLE ingredients (
   expires_at    DATE,
   category      TEXT NOT NULL DEFAULT 'その他'
                 CHECK (category IN ('野菜','肉','魚','乳製品','調味料','穀物','その他')),
+  discarded_at  TIMESTAMPTZ,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
