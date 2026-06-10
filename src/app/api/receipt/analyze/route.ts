@@ -151,7 +151,8 @@ export async function POST(req: NextRequest) {
     const draft = await analyzeReceiptImage(base64, file.type);
     return NextResponse.json(draft);
   } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "解析に失敗しました" }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[receipt/analyze]", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
