@@ -58,22 +58,17 @@ export async function analyzeReceiptImage(
     { apiVersion: "v1" }
   );
 
-  try {
-    const result = await model.generateContent([
-      { inlineData: { mimeType, data: base64 } },
-      GEMINI_PROMPT,
-    ]);
-    const text = result.response.text();
-    return parseGeminiResponse(text);
-  } catch (err) {
-    console.error("Gemini vision error:", err);
-    return getMockReceipt();
-  }
+  const result = await model.generateContent([
+    { inlineData: { mimeType, data: base64 } },
+    GEMINI_PROMPT,
+  ]);
+  const text = result.response.text();
+  return parseGeminiResponse(text);
 }
 
 function parseGeminiResponse(text: string): ReceiptDraft {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return getMockReceipt();
+  if (!jsonMatch) throw new Error("AIの応答からJSONを取得できませんでした");
 
   try {
     const raw = JSON.parse(jsonMatch[0]);
@@ -104,8 +99,8 @@ function parseGeminiResponse(text: string): ReceiptDraft {
       totalAmount: raw.totalAmount != null ? Number(raw.totalAmount) : undefined,
       items,
     };
-  } catch {
-    return getMockReceipt();
+  } catch (err) {
+    throw new Error("レシートの解析に失敗しました: " + (err instanceof Error ? err.message : String(err)));
   }
 }
 
