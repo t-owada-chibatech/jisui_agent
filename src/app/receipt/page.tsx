@@ -206,7 +206,8 @@ export default function ReceiptPage() {
             memo: `レシートから自動登録${draft.storeName ? `（${draft.storeName}）` : ""}`,
           }));
         if (inserts.length > 0) {
-          await supabase.from("budget_records").insert(inserts);
+          const { error: budgetErr } = await supabase.from("budget_records").insert(inserts);
+          if (budgetErr) throw new Error("家計簿の登録に失敗しました: " + budgetErr.message);
         }
       }
 
@@ -521,12 +522,12 @@ export default function ReceiptPage() {
           <div className="flex gap-3">
             <Button
               onClick={handleSave}
-              disabled={selectedCount === 0}
+              disabled={selectedCount === 0 && !addToBudget}
               size="lg"
               className="flex-1 justify-center"
             >
               <Check size={16} />
-              選択した食材を追加（{selectedCount}品）
+              {selectedCount > 0 ? `食材を追加（${selectedCount}品）` : "家計簿に登録する"}
             </Button>
             <Button
               variant="secondary"
