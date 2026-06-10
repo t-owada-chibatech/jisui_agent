@@ -209,10 +209,6 @@ export default function RecipesPage() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button onClick={handleAISuggest} disabled={aiLoading || ingredients.length === 0}>
-            <Sparkles size={15} />
-            {aiLoading ? "AIが考え中…" : "AIでレシピを提案"}
-          </Button>
           <Button
             onClick={handleRakutenSearch}
             disabled={rakutenLoading || ingredients.length === 0}
@@ -220,6 +216,10 @@ export default function RecipesPage() {
           >
             <ChefHat size={15} />
             {rakutenLoading ? "取得中…" : "楽天レシピで探す"}
+          </Button>
+          <Button onClick={handleAISuggest} disabled={aiLoading || ingredients.length === 0}>
+            <Sparkles size={15} />
+            {aiLoading ? "AIが考え中…" : "AIでレシピを提案"}
           </Button>
           {ingredients.length === 0 && (
             <p className="text-xs text-gray-400">先に食材を登録してください</p>
