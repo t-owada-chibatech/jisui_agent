@@ -45,6 +45,21 @@ const DB_CATEGORY: Record<ReceiptItemCategory, string> = {
   other:       "その他",
 };
 
+// レシートカテゴリ → 家計簿カテゴリへのマッピング
+const BUDGET_CATEGORY: Record<ReceiptItemCategory, string> = {
+  vegetable:   "食材",
+  meat:        "食材",
+  fish:        "食材",
+  egg_dairy:   "食材",
+  staple_food: "食材",
+  frozen_food: "食材",
+  seasoning:   "調味料",
+  daily_goods: "日用品",
+  drink:       "その他",
+  snack:       "その他",
+  other:       "その他",
+};
+
 const CATEGORY_COLOR: Record<ReceiptItemCategory, string> = {
   vegetable:   "bg-green-100 text-green-700",
   meat:        "bg-red-100 text-red-700",
@@ -175,15 +190,23 @@ export default function ReceiptPage() {
       }
 
       if (addToBudget) {
-        const totalAmount = toAdd.reduce((s, it) => s + (it.price ?? 0), 0);
-        if (totalAmount > 0) {
-          await supabase.from("budget_records").insert({
+        const byCategory: Record<string, number> = {};
+        for (const item of draft.items) {
+          if (!item.price) continue;
+          const cat = BUDGET_CATEGORY[item.category];
+          byCategory[cat] = (byCategory[cat] ?? 0) + item.price;
+        }
+        const inserts = Object.entries(byCategory)
+          .filter(([, amount]) => amount > 0)
+          .map(([category, amount]) => ({
             purchased_at: purchasedAt,
             store_name: draft.storeName ?? null,
-            category: "食材",
-            amount: totalAmount,
+            category,
+            amount,
             memo: `レシートから自動登録${draft.storeName ? `（${draft.storeName}）` : ""}`,
-          });
+          }));
+        if (inserts.length > 0) {
+          await supabase.from("budget_records").insert(inserts);
         }
       }
 
@@ -491,7 +514,7 @@ export default function ReceiptPage() {
             ) : (
               <ToggleLeft size={22} className="text-gray-400" />
             )}
-            食費を家計簿にも登録する
+            支出を家計簿に登録する（食材・日用品などカテゴリ別）
           </button>
 
           {/* Action buttons */}

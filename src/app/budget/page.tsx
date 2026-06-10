@@ -11,9 +11,10 @@ import { clsx } from "clsx";
 export const dynamic = "force-dynamic";
 
 const categoryColors: Record<BudgetCategory, string> = {
-  食材: "bg-green-100 text-green-700",
-  外食: "bg-orange-100 text-orange-700",
+  食材:   "bg-green-100 text-green-700",
+  外食:   "bg-orange-100 text-orange-700",
   調味料: "bg-purple-100 text-purple-700",
+  日用品: "bg-blue-100 text-blue-700",
   その他: "bg-gray-100 text-gray-600",
 };
 
