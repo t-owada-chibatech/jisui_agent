@@ -47,12 +47,22 @@ export default function IngredientsPage() {
   async function loadData() {
     setLoading(true);
     const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString();
-    const [{ data: active }, { data: recent }] = await Promise.all([
+
+    const [activeResult, recentResult] = await Promise.all([
       supabase.from("ingredients").select("*").is("discarded_at", null).order("expires_at", { ascending: true, nullsFirst: false }),
       supabase.from("ingredients").select("*").not("discarded_at", "is", null).gte("discarded_at", threeDaysAgo).order("discarded_at", { ascending: false }),
     ]);
-    setIngredients((active || []) as Row[]);
-    setDiscarded((recent || []) as Row[]);
+
+    // discarded_at カラムが未作成の場合はフォールバック
+    if (activeResult.error?.message?.includes("discarded_at")) {
+      const { data: all } = await supabase.from("ingredients").select("*").order("expires_at", { ascending: true, nullsFirst: false });
+      setIngredients((all || []) as Row[]);
+      setDiscarded([]);
+    } else {
+      setIngredients((activeResult.data || []) as Row[]);
+      setDiscarded((recentResult.data || []) as Row[]);
+    }
+
     setLoading(false);
   }
 
