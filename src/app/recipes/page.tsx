@@ -140,6 +140,7 @@ export default function RecipesPage() {
           ingredients,
           budget: budget ? parseInt(budget) : undefined,
           maxCookTime: maxCookTime ? parseInt(maxCookTime) : undefined,
+          dislikedIngredients: disliked ? disliked.split(/[,、]/).map((s) => s.trim()).filter(Boolean) : [],
         }),
       });
       const data = await res.json();

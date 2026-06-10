@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
     ingredients = [],
     budget,
     maxCookTime,
-  }: { ingredients: Array<{ name: string }>; budget?: number; maxCookTime?: number } = body;
+    dislikedIngredients = [],
+  }: { ingredients: Array<{ name: string }>; budget?: number; maxCookTime?: number; dislikedIngredients?: string[] } = body;
 
   const ingredientNames = ingredients.map((i: { name: string }) => i.name);
 
@@ -91,6 +92,11 @@ export async function POST(req: NextRequest) {
       if (maxCookTime) {
         const time = TIME_MAP[recipe.recipeIndication] ?? 30;
         if (time > maxCookTime) continue;
+      }
+      if (dislikedIngredients.length > 0) {
+        const materialsText = recipe.recipeMaterial.join(" ");
+        const containsDisliked = dislikedIngredients.some((d) => materialsText.includes(d));
+        if (containsDisliked) continue;
       }
 
       const { matched, missing, score } = analyzeIngredientMatch(
