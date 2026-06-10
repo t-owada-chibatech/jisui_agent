@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
 import { BudgetCategory } from "@/types";
 
-const categories: BudgetCategory[] = ["食材", "外食", "調味料", "日用品", "その他"];
+const categories: BudgetCategory[] = ["食材", "外食", "調味料", "日用品", "お菓子", "その他"];
 
 export default function NewBudgetPage() {
   const router = useRouter();

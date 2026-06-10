@@ -71,7 +71,7 @@ CREATE TABLE budget_records (
   purchased_at  DATE NOT NULL,
   store_name    TEXT,
   category      TEXT NOT NULL DEFAULT '食材'
-                CHECK (category IN ('食材','外食','調味料','日用品','その他')),
+                CHECK (category IN ('食材','外食','調味料','日用品','お菓子','その他')),
   amount        NUMERIC NOT NULL,
   memo          TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -15,6 +15,7 @@ const categoryColors: Record<BudgetCategory, string> = {
   外食:   "bg-orange-100 text-orange-700",
   調味料: "bg-purple-100 text-purple-700",
   日用品: "bg-blue-100 text-blue-700",
+  お菓子: "bg-pink-100 text-pink-700",
   その他: "bg-gray-100 text-gray-600",
 };
 

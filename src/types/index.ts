@@ -53,7 +53,7 @@ export interface Recipe {
   totalIngredientCount?: number;
 }
 
-export type BudgetCategory = "食材" | "外食" | "調味料" | "日用品" | "その他";
+export type BudgetCategory = "食材" | "外食" | "調味料" | "日用品" | "お菓子" | "その他";
 
 export interface BudgetRecord {
   id: string;

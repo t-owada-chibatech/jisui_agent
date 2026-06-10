@@ -56,7 +56,7 @@ const BUDGET_CATEGORY: Record<ReceiptItemCategory, string> = {
   seasoning:   "調味料",
   daily_goods: "日用品",
   drink:       "その他",
-  snack:       "その他",
+  snack:       "お菓子",
   other:       "その他",
 };
 
