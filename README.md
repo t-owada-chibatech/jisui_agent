@@ -10,6 +10,7 @@
 |------|------|------|
 | 食材管理 | 食材・賞味期限・価格を登録 | ✅ 実装済み |
 | AI レシピ提案 | 登録食材をもとにGemini APIがレシピを生成 | ✅ 実装済み |
+| 楽天レシピ連携 | 実在の人気レシピを食材マッチ度順に表示 | ✅ 実装済み |
 | 買い物リスト | 不足食材を優先度付きで管理 | ✅ 実装済み |
 | 家計簿 | 食費の記録・月次/週次集計 | ✅ 実装済み |
 | ダッシュボード | 予算・期限・レシピを一覧表示 | ✅ 実装済み |
@@ -38,11 +39,14 @@ cp .env.example .env.local
 # .env.local を編集して各キーを設定
 ```
 
-| 変数名 | 取得先 |
-|--------|--------|
-| `GEMINI_API_KEY` | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API |
+| 変数名 | 取得先 | 用途 |
+|--------|--------|------|
+| `GEMINI_API_KEY` | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) | AIレシピ生成 |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API | DB接続 |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API | DB接続 |
+| `RAKUTEN_APP_ID` | [webservice.rakuten.co.jp](https://webservice.rakuten.co.jp/) | 楽天レシピAPI（サーバー側のみ） |
+
+> **楽天APIキーについて**: `RAKUTEN_APP_ID` は `NEXT_PUBLIC_` を付けずにサーバー側専用の環境変数として設定してください。楽天Webサービスに登録してアプリIDを取得します（無料）。設定しない場合、楽天レシピ機能は無効になりますが、AIレシピ提案は引き続き使えます。
 
 ### 3. Supabase でテーブルを作成
 

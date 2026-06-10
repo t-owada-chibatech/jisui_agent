@@ -138,6 +138,22 @@ export interface ReceiptDraft {
   items: ReceiptItemDraft[];
 }
 
+export interface RakutenRecipeSuggestion {
+  recipeId: string;
+  recipeTitle: string;
+  recipeUrl: string;
+  foodImageUrl: string;
+  recipeDescription: string;
+  recipeMaterial: string[];
+  recipeIndication: string;
+  recipeCost: string;
+  rank: string;
+  matchedIngredients: string[];
+  missingIngredients: string[];
+  matchScore: number;
+  suggestionReason: string;
+}
+
 export interface DashboardStats {
   monthlySpent: number;
   monthlyBudget: number;
