@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ExpiryBadge } from "@/components/ingredients/ExpiryBadge";
@@ -17,6 +17,7 @@ const categoryColors: Record<IngredientCategory, string> = {
   乳製品: "bg-yellow-100 text-yellow-700",
   調味料: "bg-purple-100 text-purple-700",
   穀物: "bg-orange-100 text-orange-700",
+  お菓子: "bg-pink-100 text-pink-700",
   その他: "bg-gray-100 text-gray-600",
 };
 
@@ -40,6 +41,7 @@ export default function IngredientsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [discarding, setDiscarding] = useState(false);
+  const [discardingExpired, setDiscardingExpired] = useState(false);
   const [showDiscarded, setShowDiscarded] = useState(false);
 
   useEffect(() => { loadData(); }, []);
@@ -94,6 +96,26 @@ export default function IngredientsPage() {
     setDiscarding(false);
   }
 
+  const expiredIds = ingredients
+    .filter((i) => getExpiryStatus(i.expires_at ?? undefined) === "expired")
+    .map((i) => i.id);
+
+  async function handleDiscardExpired() {
+    if (expiredIds.length === 0 || discardingExpired) return;
+    setDiscardingExpired(true);
+    await supabase
+      .from("ingredients")
+      .update({ discarded_at: new Date().toISOString() })
+      .in("id", expiredIds);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      expiredIds.forEach((id) => next.delete(id));
+      return next;
+    });
+    await loadData();
+    setDiscardingExpired(false);
+  }
+
   const sorted = [...ingredients].sort(
     (a, b) =>
       statusOrder[getExpiryStatus(a.expires_at ?? undefined)] -
@@ -113,6 +135,16 @@ export default function IngredientsPage() {
           <p className="text-sm text-gray-500 mt-0.5">{ingredients.length}件の食材</p>
         </div>
         <div className="flex items-center gap-2">
+          {expiredIds.length > 0 && (
+            <Button
+              onClick={handleDiscardExpired}
+              disabled={discardingExpired}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              <AlertTriangle size={14} />
+              {discardingExpired ? "削除中…" : `期限切れを一括削除（${expiredIds.length}件）`}
+            </Button>
+          )}
           {selectedIds.size > 0 && (
             <Button
               onClick={handleDiscard}
