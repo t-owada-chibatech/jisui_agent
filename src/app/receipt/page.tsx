@@ -39,7 +39,7 @@ const DB_CATEGORY: Record<ReceiptItemCategory, string> = {
   staple_food: "穀物",
   seasoning:   "調味料",
   drink:       "その他",
-  snack:       "その他",
+  snack:       "お菓子",
   frozen_food: "その他",
   daily_goods: "その他",
   other:       "その他",

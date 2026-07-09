@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
 import { Ingredient, IngredientCategory } from "@/types";
 
-const categories: IngredientCategory[] = ["野菜", "肉", "魚", "乳製品", "調味料", "穀物", "その他"];
+const categories: IngredientCategory[] = ["野菜", "肉", "魚", "乳製品", "調味料", "穀物", "お菓子", "その他"];
 const units = ["g", "kg", "ml", "L", "個", "本", "枚", "袋", "丁", "束", "缶", "杯"];
 
 interface IngredientFormProps {
