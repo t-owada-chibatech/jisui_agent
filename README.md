@@ -52,22 +52,13 @@ cp .env.example .env.local
 
 ### 3. Supabase でテーブルを作成
 
-[Supabase SQL Editor](https://supabase.com/dashboard) を開き、`supabase/schema.sql` の内容を実行。
+[Supabase SQL Editor](https://supabase.com/dashboard) を開き、以下の順にSQLを実行してください。
 
-その後 RLS を無効化（認証なし MVP の場合）:
-
-```sql
-ALTER TABLE ingredients        DISABLE ROW LEVEL SECURITY;
-ALTER TABLE recipes            DISABLE ROW LEVEL SECURITY;
-ALTER TABLE recipe_ingredients DISABLE ROW LEVEL SECURITY;
-ALTER TABLE recipe_steps       DISABLE ROW LEVEL SECURITY;
-ALTER TABLE monthly_budgets    DISABLE ROW LEVEL SECURITY;
-ALTER TABLE weekly_budgets     DISABLE ROW LEVEL SECURITY;
-ALTER TABLE budget_records     DISABLE ROW LEVEL SECURITY;
-ALTER TABLE shopping_items     DISABLE ROW LEVEL SECURITY;
-```
-
-続けて、AIレシピ相談・適当レシピ集・認証用のテーブルを作るため `supabase/add_auth_and_casual_recipes.sql` の内容も実行してください（`profiles` / `chat_sessions` / `chat_messages` / `casual_recipes` を作成し、RLSを有効化してユーザーごとにデータを分離します）。
+1. `supabase/schema.sql` — 食材・レシピ・予算・買い物リストなどの基本テーブル
+2. `supabase/add_snack_category.sql` — 食材カテゴリに「お菓子」を追加
+3. `supabase/add_auth_and_casual_recipes.sql` — 認証・AIレシピ相談・適当レシピ集用のテーブル（`profiles` / `chat_sessions` / `chat_messages` / `casual_recipes`）
+4. `supabase/add_shared_casual_recipes.sql` — 適当レシピ集を全ユーザー共有にする
+5. `supabase/add_user_scoping.sql` — 食材・レシピ・予算・買い物リストにユーザー分離（RLS）をかける。**このアプリはログイン必須で、全データがユーザーごとに分離されます**（実行すると既存のサンプルデータは削除されます）
 
 ### 4. Supabase Auth の設定
 

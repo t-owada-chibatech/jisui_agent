@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/auth/useSession";
 import { ReceiptDraft, ReceiptItemDraft, ReceiptItemCategory } from "@/types";
 import { formatCurrency } from "@/lib/utils/currency";
 
@@ -82,6 +83,7 @@ type Status = "idle" | "ready" | "analyzing" | "review" | "saving" | "done";
 
 export default function ReceiptPage() {
   const router = useRouter();
+  const { user } = useSession();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [status, setStatus] = useState<Status>("idle");
@@ -165,7 +167,7 @@ export default function ReceiptPage() {
   // ── Save ───────────────────────────────────
 
   async function handleSave() {
-    if (!draft) return;
+    if (!draft || !user) return;
     setStatus("saving");
     setError(null);
 
@@ -184,6 +186,7 @@ export default function ReceiptPage() {
             ? new Date(Date.now() + it.estimatedExpireDays * 86400000).toISOString().split("T")[0]
             : null,
           category: DB_CATEGORY[it.category],
+          user_id: user.id,
         }));
         const { error: insertErr } = await supabase.from("ingredients").insert(rows);
         if (insertErr) throw new Error(insertErr.message);
@@ -204,6 +207,7 @@ export default function ReceiptPage() {
             category,
             amount,
             memo: `レシートから自動登録${draft.storeName ? `（${draft.storeName}）` : ""}`,
+            user_id: user.id,
           }));
         if (inserts.length > 0) {
           const { error: budgetErr } = await supabase.from("budget_records").insert(inserts);

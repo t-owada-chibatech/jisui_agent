@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Search, Clock, Wallet, Trash2, BookMarked, ChevronDown, ChevronUp } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { AuthGuard } from "@/components/auth/AuthGuard";
 import { useSession } from "@/lib/auth/useSession";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -190,9 +189,5 @@ function MyRecipesPageInner() {
 }
 
 export default function MyRecipesPage() {
-  return (
-    <AuthGuard>
-      <MyRecipesPageInner />
-    </AuthGuard>
-  );
+  return <MyRecipesPageInner />;
 }

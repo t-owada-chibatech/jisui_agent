@@ -1,3 +1,5 @@
+"use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -8,8 +10,6 @@ import { formatDate, formatYearMonth, getCurrentYearMonth, getWeekRange } from "
 import { BudgetCategory } from "@/types";
 import { clsx } from "clsx";
 
-export const dynamic = "force-dynamic";
-
 const categoryColors: Record<BudgetCategory, string> = {
   食材:   "bg-green-100 text-green-700",
   外食:   "bg-orange-100 text-orange-700",
@@ -19,28 +19,46 @@ const categoryColors: Record<BudgetCategory, string> = {
   その他: "bg-gray-100 text-gray-600",
 };
 
-export default async function BudgetPage() {
+type BudgetRecordRow = Record<string, unknown> & { purchased_at: string; amount: number; category: string };
+
+export default function BudgetPage() {
   const currentYM = getCurrentYearMonth();
+  const [loading, setLoading] = useState(true);
+  const [allRecords, setAllRecords] = useState<BudgetRecordRow[]>([]);
+  const [monthlyBudget, setMonthlyBudget] = useState(20000);
+  const [weeklyBudget, setWeeklyBudget] = useState(5000);
+  const [weekStart, setWeekStart] = useState(new Date().toISOString().split("T")[0]);
 
-  const [{ data: records }, { data: monthlyBudgetRow }, { data: weeklyBudgetRow }] = await Promise.all([
-    supabase.from("budget_records").select("*").order("purchased_at", { ascending: false }),
-    supabase.from("monthly_budgets").select("*").eq("year_month", currentYM).maybeSingle(),
-    supabase.from("weekly_budgets").select("*").order("week_start", { ascending: false }).limit(1).maybeSingle(),
-  ]);
+  useEffect(() => {
+    loadBudget();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const monthlyBudget = monthlyBudgetRow?.budget ?? 20000;
-  const weeklyBudget = weeklyBudgetRow?.budget ?? 5000;
-  const weekStart = weeklyBudgetRow?.week_start ?? new Date().toISOString().split("T")[0];
+  async function loadBudget() {
+    setLoading(true);
+    const [{ data: records }, { data: monthlyBudgetRow }, { data: weeklyBudgetRow }] = await Promise.all([
+      supabase.from("budget_records").select("*").order("purchased_at", { ascending: false }),
+      supabase.from("monthly_budgets").select("*").eq("year_month", currentYM).maybeSingle(),
+      supabase.from("weekly_budgets").select("*").order("week_start", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+
+    setAllRecords((records || []) as BudgetRecordRow[]);
+    setMonthlyBudget(monthlyBudgetRow?.budget ?? 20000);
+    setWeeklyBudget(weeklyBudgetRow?.budget ?? 5000);
+    setWeekStart(weeklyBudgetRow?.week_start ?? new Date().toISOString().split("T")[0]);
+    setLoading(false);
+  }
+
+  if (loading) {
+    return <div className="text-center py-12 text-gray-400 text-sm">読み込み中…</div>;
+  }
 
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
   const weekEndStr = weekEnd.toISOString().split("T")[0];
 
-  const allRecords = records || [];
-  const monthlyRecords = allRecords.filter((r) => (r.purchased_at as string).startsWith(currentYM));
-  const weeklyRecords = allRecords.filter(
-    (r) => (r.purchased_at as string) >= weekStart && (r.purchased_at as string) <= weekEndStr
-  );
+  const monthlyRecords = allRecords.filter((r) => r.purchased_at.startsWith(currentYM));
+  const weeklyRecords = allRecords.filter((r) => r.purchased_at >= weekStart && r.purchased_at <= weekEndStr);
 
   const monthlySpent = monthlyRecords.reduce((sum, r) => sum + Number(r.amount), 0);
   const weeklySpent = weeklyRecords.reduce((sum, r) => sum + Number(r.amount), 0);

@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/Badge";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils/currency";
 import { analyzeIngredientMatch } from "@/lib/rakutenRecipe";
+import { useSession } from "@/lib/auth/useSession";
+import { authFetch } from "@/lib/auth/authFetch";
 import {
   Ingredient,
   IngredientCategory,
@@ -122,6 +124,7 @@ export default function RecipesPage() {
   const [rakutenFetched, setRakutenFetched] = useState(false);
   const [addedShoppingIds, setAddedShoppingIds] = useState<Set<string>>(new Set());
   const [casualCandidates, setCasualCandidates] = useState<RecipeCandidate[]>([]);
+  const { user } = useSession();
 
   useEffect(() => {
     loadData();
@@ -142,7 +145,7 @@ export default function RecipesPage() {
     setAiLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/recipes/suggest", {
+      const res = await authFetch("/api/recipes/suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -217,12 +220,13 @@ export default function RecipesPage() {
   };
 
   const handleAddToShopping = async (recipeId: string, missingIngredients: string[]) => {
-    if (missingIngredients.length === 0) return;
+    if (missingIngredients.length === 0 || !user) return;
     await supabase.from("shopping_items").insert(
       missingIngredients.map((name) => ({
         ingredient_name: name,
         priority: 2,
         is_purchased: false,
+        user_id: user.id,
       }))
     );
     setAddedShoppingIds((prev) => {

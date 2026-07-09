@@ -4,12 +4,14 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/auth/useSession";
 import { BudgetCategory } from "@/types";
 
 const categories: BudgetCategory[] = ["食材", "外食", "調味料", "日用品", "お菓子", "その他"];
 
 export default function NewBudgetPage() {
   const router = useRouter();
+  const { user } = useSession();
   const [form, setForm] = useState({
     purchasedAt: new Date().toISOString().split("T")[0],
     storeName: "",
@@ -26,6 +28,7 @@ export default function NewBudgetPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     setSaving(true);
     setError("");
 
@@ -35,6 +38,7 @@ export default function NewBudgetPage() {
       category: form.category,
       amount: Number(form.amount),
       memo: form.memo || null,
+      user_id: user.id,
     });
 
     setSaving(false);

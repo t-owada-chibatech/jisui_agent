@@ -7,12 +7,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  const isLoginPage = pathname === "/login";
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!isLoginPage && !loading && !user) {
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
     }
-  }, [loading, user, pathname, router]);
+  }, [isLoginPage, loading, user, pathname, router]);
+
+  // /login はログイン前でも表示できないと詰むので、ゲートの対象外にする
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
 
   if (loading || !user) {
     return <div className="text-center py-12 text-gray-400 text-sm">読み込み中…</div>;

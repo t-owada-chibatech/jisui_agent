@@ -1,3 +1,5 @@
+"use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, TrendingUp, ChefHat, ShoppingCart, ArrowRight } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -7,8 +9,6 @@ import { formatCurrency, calcBudgetProgress } from "@/lib/utils/currency";
 import { getExpiryStatus, getCurrentYearMonth, formatYearMonth, getWeekRange } from "@/lib/utils/date";
 import { Ingredient, IngredientCategory } from "@/types";
 import { clsx } from "clsx";
-
-export const dynamic = "force-dynamic";
 
 function mapIngredient(row: Record<string, unknown>): Ingredient {
   return {
@@ -24,57 +24,107 @@ function mapIngredient(row: Record<string, unknown>): Ingredient {
   };
 }
 
-export default async function DashboardPage() {
+interface RecipeMatch {
+  id: string;
+  title: string;
+  cookTimeMin: number;
+  estimatedCost: number;
+  matchedCount: number;
+  totalIngredientCount: number;
+}
+
+export default function DashboardPage() {
   const currentYM = getCurrentYearMonth();
+  const [loading, setLoading] = useState(true);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [monthlyBudget, setMonthlyBudget] = useState(20000);
+  const [weeklyBudget, setWeeklyBudget] = useState(5000);
+  const [weekStart, setWeekStart] = useState(new Date().toISOString().split("T")[0]);
+  const [monthlySpent, setMonthlySpent] = useState(0);
+  const [weeklySpent, setWeeklySpent] = useState(0);
+  const [shoppingRows, setShoppingRows] = useState<Record<string, unknown>[]>([]);
+  const [recipesWithMatch, setRecipesWithMatch] = useState<RecipeMatch[]>([]);
 
-  const [
-    { data: ingredientRows },
-    { data: budgetRows },
-    { data: monthlyBudgetRow },
-    { data: weeklyBudgetRow },
-    { data: shoppingRows },
-    { data: recipeRows },
-  ] = await Promise.all([
-    supabase.from("ingredients").select("*").order("expires_at", { ascending: true, nullsFirst: false }),
-    supabase.from("budget_records").select("*"),
-    supabase.from("monthly_budgets").select("*").eq("year_month", currentYM).maybeSingle(),
-    supabase.from("weekly_budgets").select("*").order("week_start", { ascending: false }).limit(1).maybeSingle(),
-    supabase.from("shopping_items").select("*").eq("is_purchased", false).order("priority", { ascending: false }).limit(5),
-    supabase.from("recipes").select("*, recipe_ingredients(*)").order("created_at", { ascending: false }).limit(10),
-  ]);
+  useEffect(() => {
+    loadDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const ingredients = (ingredientRows || []).map(mapIngredient);
-  const monthlyBudget = monthlyBudgetRow?.budget ?? 20000;
-  const weeklyBudget = weeklyBudgetRow?.budget ?? 5000;
-  const weekStart = weeklyBudgetRow?.week_start ?? new Date().toISOString().split("T")[0];
+  async function loadDashboard() {
+    setLoading(true);
+    const [
+      { data: ingredientRows },
+      { data: budgetRows },
+      { data: monthlyBudgetRow },
+      { data: weeklyBudgetRow },
+      { data: shoppingData },
+      { data: recipeRows },
+    ] = await Promise.all([
+      supabase.from("ingredients").select("*").order("expires_at", { ascending: true, nullsFirst: false }),
+      supabase.from("budget_records").select("*"),
+      supabase.from("monthly_budgets").select("*").eq("year_month", currentYM).maybeSingle(),
+      supabase.from("weekly_budgets").select("*").order("week_start", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("shopping_items").select("*").eq("is_purchased", false).order("priority", { ascending: false }).limit(5),
+      supabase.from("recipes").select("*, recipe_ingredients(*)").order("created_at", { ascending: false }).limit(10),
+    ]);
 
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 6);
-  const weekEndStr = weekEnd.toISOString().split("T")[0];
+    const mappedIngredients = (ingredientRows || []).map(mapIngredient);
+    const mBudget = monthlyBudgetRow?.budget ?? 20000;
+    const wBudget = weeklyBudgetRow?.budget ?? 5000;
+    const wStart = weeklyBudgetRow?.week_start ?? new Date().toISOString().split("T")[0];
 
-  const monthlySpent = (budgetRows || [])
-    .filter((r) => (r.purchased_at as string).startsWith(currentYM))
-    .reduce((sum, r) => sum + Number(r.amount), 0);
+    const weekEnd = new Date(wStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    const weekEndStr = weekEnd.toISOString().split("T")[0];
 
-  const weeklySpent = (budgetRows || [])
-    .filter((r) => (r.purchased_at as string) >= weekStart && (r.purchased_at as string) <= weekEndStr)
-    .reduce((sum, r) => sum + Number(r.amount), 0);
+    const mSpent = (budgetRows || [])
+      .filter((r) => (r.purchased_at as string).startsWith(currentYM))
+      .reduce((sum, r) => sum + Number(r.amount), 0);
+
+    const wSpent = (budgetRows || [])
+      .filter((r) => (r.purchased_at as string) >= wStart && (r.purchased_at as string) <= weekEndStr)
+      .reduce((sum, r) => sum + Number(r.amount), 0);
+
+    const ingredientNames = new Set(mappedIngredients.map((i) => i.name));
+    const matches: RecipeMatch[] = (recipeRows || [])
+      .map((r) => {
+        const ings = (r.recipe_ingredients as Array<Record<string, unknown>>) || [];
+        const required = ings.filter((i) => !i.is_optional);
+        const matched = required.filter((i) => ingredientNames.has(i.ingredient_name as string)).length;
+        return {
+          id: r.id as string,
+          title: r.title as string,
+          cookTimeMin: r.cook_time_min as number,
+          estimatedCost: Number(r.estimated_cost),
+          matchedCount: matched,
+          totalIngredientCount: required.length,
+        };
+      })
+      .sort((a, b) => {
+        const aRatio = a.totalIngredientCount ? a.matchedCount / a.totalIngredientCount : 0;
+        const bRatio = b.totalIngredientCount ? b.matchedCount / b.totalIngredientCount : 0;
+        return bRatio - aRatio;
+      })
+      .slice(0, 3);
+
+    setIngredients(mappedIngredients);
+    setMonthlyBudget(mBudget);
+    setWeeklyBudget(wBudget);
+    setWeekStart(wStart);
+    setMonthlySpent(mSpent);
+    setWeeklySpent(wSpent);
+    setShoppingRows((shoppingData || []) as Record<string, unknown>[]);
+    setRecipesWithMatch(matches);
+    setLoading(false);
+  }
+
+  if (loading) {
+    return <div className="text-center py-12 text-gray-400 text-sm">読み込み中…</div>;
+  }
 
   const expiringIngredients = ingredients.filter((i) =>
     ["expired", "urgent", "soon"].includes(getExpiryStatus(i.expiresAt))
   );
-
-  const ingredientNames = new Set(ingredients.map((i) => i.name));
-  const recipesWithMatch = (recipeRows || []).map((r) => {
-    const ings = (r.recipe_ingredients as Array<Record<string, unknown>>) || [];
-    const required = ings.filter((i) => !i.is_optional);
-    const matched = required.filter((i) => ingredientNames.has(i.ingredient_name as string)).length;
-    return { id: r.id as string, title: r.title as string, cookTimeMin: r.cook_time_min as number, estimatedCost: Number(r.estimated_cost), matchedCount: matched, totalIngredientCount: required.length };
-  }).sort((a, b) => {
-    const aRatio = a.totalIngredientCount ? a.matchedCount / a.totalIngredientCount : 0;
-    const bRatio = b.totalIngredientCount ? b.matchedCount / b.totalIngredientCount : 0;
-    return bRatio - aRatio;
-  }).slice(0, 3);
 
   const monthlyProgress = calcBudgetProgress(monthlySpent, monthlyBudget);
   const weeklyProgress = calcBudgetProgress(weeklySpent, weeklyBudget);
@@ -195,11 +245,11 @@ export default async function DashboardPage() {
             すべて見る <ArrowRight size={12} />
           </Link>
         </CardHeader>
-        {(shoppingRows || []).length === 0 ? (
+        {shoppingRows.length === 0 ? (
           <p className="text-sm text-gray-400 py-2">買い物リストは空です</p>
         ) : (
           <div className="space-y-1.5">
-            {(shoppingRows || []).map((item, idx) => (
+            {shoppingRows.map((item, idx) => (
               <div key={item.id as string} className="flex items-center gap-3 py-1.5">
                 <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-xs flex items-center justify-center font-bold flex-shrink-0">{idx + 1}</span>
                 <span className="text-sm text-gray-800 flex-1">{item.ingredient_name as string}</span>

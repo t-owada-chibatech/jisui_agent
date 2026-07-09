@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/auth/useSession";
 import { Ingredient, IngredientCategory } from "@/types";
 
 const categories: IngredientCategory[] = ["野菜", "肉", "魚", "乳製品", "調味料", "穀物", "お菓子", "その他"];
@@ -16,6 +17,7 @@ interface IngredientFormProps {
 
 export function IngredientForm({ initialData, mode }: IngredientFormProps) {
   const router = useRouter();
+  const { user } = useSession();
   const [form, setForm] = useState({
     name: initialData?.name ?? "",
     quantity: initialData?.quantity?.toString() ?? "",
@@ -34,6 +36,7 @@ export function IngredientForm({ initialData, mode }: IngredientFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     setSaving(true);
     setError("");
 
@@ -50,7 +53,7 @@ export function IngredientForm({ initialData, mode }: IngredientFormProps) {
     let supabaseError = null;
 
     if (mode === "create") {
-      const { error: err } = await supabase.from("ingredients").insert(payload);
+      const { error: err } = await supabase.from("ingredients").insert({ ...payload, user_id: user.id });
       supabaseError = err;
     } else {
       const { error: err } = await supabase

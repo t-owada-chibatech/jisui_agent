@@ -4,6 +4,7 @@ import { Plus, ShoppingCart, Check, Sparkles, ChevronDown, ChevronUp } from "luc
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/auth/useSession";
 import { formatCurrency } from "@/lib/utils/currency";
 import { getCurrentYearMonth } from "@/lib/utils/date";
 import { ShoppingItem, AISuggestedIngredient, SuggestionPriority } from "@/types";
@@ -20,6 +21,7 @@ const PRIORITY_COLOR: Record<SuggestionPriority, string> = {
 };
 
 export default function ShoppingPage() {
+  const { user } = useSession();
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [newItemName, setNewItemName] = useState("");
@@ -116,10 +118,10 @@ export default function ShoppingPage() {
   }
 
   async function addItem() {
-    if (!newItemName.trim()) return;
+    if (!newItemName.trim() || !user) return;
     const { data, error } = await supabase
       .from("shopping_items")
-      .insert({ ingredient_name: newItemName.trim(), priority: 0 })
+      .insert({ ingredient_name: newItemName.trim(), priority: 0, user_id: user.id })
       .select()
       .single();
     if (data && !error) {
@@ -143,12 +145,14 @@ export default function ShoppingPage() {
   }
 
   async function addAiSuggestionToList(suggestion: AISuggestedIngredient) {
+    if (!user) return;
     const { data, error } = await supabase
       .from("shopping_items")
       .insert({
         ingredient_name: suggestion.name,
         estimated_price: suggestion.estimatedPrice,
         priority: suggestion.priority === "high" ? 2 : suggestion.priority === "medium" ? 1 : 0,
+        user_id: user.id,
       })
       .select()
       .single();

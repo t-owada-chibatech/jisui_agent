@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { createClient } from "@supabase/supabase-js";
+import { getRequestUser } from "@/lib/auth/serverSupabase";
 
 export async function POST(req: NextRequest) {
+  const { client: supabase, user } = await getRequestUser(req);
+  if (!user) {
+    return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
+  }
+
   // ビルド時に実行されないよう、関数内でクライアントを初期化
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
   const body = await req.json();
   const { ingredients, budget, maxCookTime, genre, dislikedIngredients } = body;
 
@@ -94,6 +95,7 @@ ${constraints ? `【条件】\n${constraints}` : ""}
           estimated_cost: recipe.estimatedCost,
           genre: recipe.genre,
           servings: recipe.servings,
+          user_id: user.id,
         })
         .select()
         .single();

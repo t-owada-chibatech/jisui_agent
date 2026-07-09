@@ -1,29 +1,62 @@
+"use client";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Clock, Wallet, Users, CheckCircle, Circle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils/currency";
-import { notFound } from "next/navigation";
 import { RecipeGenre } from "@/types";
 
-export const dynamic = "force-dynamic";
+export default function RecipeDetailPage() {
+  const params = useParams<{ id: string }>();
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [recipeRow, setRecipeRow] = useState<Record<string, unknown> | null>(null);
+  const [ownedIngredients, setOwnedIngredients] = useState<Set<string>>(new Set());
 
-export default async function RecipeDetailPage({ params }: { params: { id: string } }) {
-  const [{ data: recipeRow }, { data: ingredientRows }] = await Promise.all([
-    supabase
-      .from("recipes")
-      .select("*, recipe_ingredients(*), recipe_steps(*)")
-      .eq("id", params.id)
-      .single(),
-    supabase.from("ingredients").select("name"),
-  ]);
+  useEffect(() => {
+    loadRecipe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]);
 
-  if (!recipeRow) notFound();
+  async function loadRecipe() {
+    setLoading(true);
+    const [{ data: recipe }, { data: ingredientRows }] = await Promise.all([
+      supabase
+        .from("recipes")
+        .select("*, recipe_ingredients(*), recipe_steps(*)")
+        .eq("id", params.id)
+        .single(),
+      supabase.from("ingredients").select("name"),
+    ]);
 
-  const ownedIngredients = new Set((ingredientRows || []).map((i) => i.name as string));
+    if (!recipe) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
 
-  const ingredients = ((recipeRow.recipe_ingredients as Array<Record<string, unknown>>) || []);
+    setRecipeRow(recipe as Record<string, unknown>);
+    setOwnedIngredients(new Set((ingredientRows || []).map((i) => i.name as string)));
+    setLoading(false);
+  }
+
+  if (loading) {
+    return <div className="text-center py-12 text-gray-400 text-sm">読み込み中…</div>;
+  }
+
+  if (notFound || !recipeRow) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-400 mb-4">レシピが見つかりませんでした</p>
+        <Link href="/recipes" className="text-sm text-emerald-600 hover:underline">レシピ一覧に戻る</Link>
+      </div>
+    );
+  }
+
+  const ingredients = (recipeRow.recipe_ingredients as Array<Record<string, unknown>>) || [];
   const steps = ((recipeRow.recipe_steps as Array<Record<string, unknown>>) || [])
     .sort((a, b) => (a.step_order as number) - (b.step_order as number));
 
@@ -39,7 +72,7 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
           <Badge variant="info">{recipeRow.genre as RecipeGenre}</Badge>
         </div>
         <h2 className="text-2xl font-bold text-gray-900">{recipeRow.title as string}</h2>
-        {recipeRow.description && <p className="text-gray-500 mt-1">{recipeRow.description as string}</p>}
+        {recipeRow.description ? <p className="text-gray-500 mt-1">{recipeRow.description as string}</p> : null}
         <div className="flex items-center gap-6 mt-3">
           <span className="flex items-center gap-1.5 text-sm text-gray-600">
             <Clock size={15} className="text-gray-400" />{recipeRow.cook_time_min as number}分
