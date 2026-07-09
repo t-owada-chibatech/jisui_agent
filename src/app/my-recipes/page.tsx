@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Search, Clock, Wallet, Trash2, BookMarked, ChevronDown, ChevronUp } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { AuthGuard } from "@/components/auth/AuthGuard";
+import { useSession } from "@/lib/auth/useSession";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils/currency";
 import { CasualRecipe, CasualRecipeDifficulty } from "@/types";
@@ -33,25 +35,28 @@ function mapCasualRecipe(row: Record<string, unknown>): CasualRecipe {
 }
 
 function MyRecipesPageInner() {
+  const { user } = useSession();
   const [recipes, setRecipes] = useState<CasualRecipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  async function loadRecipes() {
+  async function loadRecipes(userId: string) {
     setLoading(true);
+    // casual_recipesは全ユーザーに公開されているので、自分の投稿だけに絞り込む
     const { data } = await supabase
       .from("casual_recipes")
       .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
     setRecipes((data || []).map((r) => mapCasualRecipe(r as Record<string, unknown>)));
     setLoading(false);
   }
 
   useEffect(() => {
-    loadRecipes();
-  }, []);
+    if (user) loadRecipes(user.id);
+  }, [user]);
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
@@ -74,8 +79,10 @@ function MyRecipesPageInner() {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">適当レシピ集</h2>
-        <p className="text-sm text-gray-500 mt-0.5">AIとの会話から生まれた、大学生向けのゆるい自炊レシピです</p>
+        <h2 className="text-xl font-bold text-gray-900">自分の適当レシピ投稿</h2>
+        <p className="text-sm text-gray-500 mt-0.5">
+          あなたが共有した適当レシピです。みんなの分は<Link href="/recipes" className="text-emerald-600 hover:underline">レシピ提案</Link>から探せます
+        </p>
       </div>
 
       <div className="relative">

@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/Badge";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils/currency";
 import { analyzeIngredientMatch } from "@/lib/rakutenRecipe";
-import { useSession } from "@/lib/auth/useSession";
 import {
   Ingredient,
   IngredientCategory,
@@ -123,7 +122,6 @@ export default function RecipesPage() {
   const [rakutenFetched, setRakutenFetched] = useState(false);
   const [addedShoppingIds, setAddedShoppingIds] = useState<Set<string>>(new Set());
   const [casualCandidates, setCasualCandidates] = useState<RecipeCandidate[]>([]);
-  const { user } = useSession();
 
   useEffect(() => {
     loadData();
@@ -194,32 +192,28 @@ export default function RecipesPage() {
       setRakutenLoading(false);
     }
 
-    // ログイン中なら、自分の適当レシピ集も検索対象にする（RLSにより自分のレシピのみ取得される）
-    if (user) {
-      const { data: casualRows } = await supabase.from("casual_recipes").select("*");
-      const ownedNames = ingredients.map((i) => i.name);
-      const candidates: RecipeCandidate[] = (casualRows || [])
-        .map((row) => mapCasualRecipe(row as Record<string, unknown>))
-        .map((recipe): RecipeCandidate => {
-          const { matched, missing, score } = analyzeIngredientMatch(recipe.ingredients, ownedNames);
-          return {
-            source: "casual",
-            id: recipe.id,
-            title: recipe.title,
-            description: recipe.description,
-            costLabel: recipe.estimatedCost != null ? formatCurrency(recipe.estimatedCost) : undefined,
-            timeLabel: recipe.cookingTimeMinutes != null ? `${recipe.cookingTimeMinutes}分` : undefined,
-            matchScore: score,
-            matchedIngredients: matched,
-            missingIngredients: missing,
-            reason: "AIとのチャットから生まれた自分の適当レシピ",
-          };
-        })
-        .sort((a, b) => b.matchScore - a.matchScore);
-      setCasualCandidates(candidates);
-    } else {
-      setCasualCandidates([]);
-    }
+    // みんなが共有した適当レシピ集も検索対象にする（casual_recipesは全ユーザーに公開されている）
+    const { data: casualRows } = await supabase.from("casual_recipes").select("*");
+    const ownedNames = ingredients.map((i) => i.name);
+    const candidates: RecipeCandidate[] = (casualRows || [])
+      .map((row) => mapCasualRecipe(row as Record<string, unknown>))
+      .map((recipe): RecipeCandidate => {
+        const { matched, missing, score } = analyzeIngredientMatch(recipe.ingredients, ownedNames);
+        return {
+          source: "casual",
+          id: recipe.id,
+          title: recipe.title,
+          description: recipe.description,
+          costLabel: recipe.estimatedCost != null ? formatCurrency(recipe.estimatedCost) : undefined,
+          timeLabel: recipe.cookingTimeMinutes != null ? `${recipe.cookingTimeMinutes}分` : undefined,
+          matchScore: score,
+          matchedIngredients: matched,
+          missingIngredients: missing,
+          reason: "誰かがAIとのチャットから生み出して共有した適当レシピ",
+        };
+      })
+      .sort((a, b) => b.matchScore - a.matchScore);
+    setCasualCandidates(candidates);
   };
 
   const handleAddToShopping = async (recipeId: string, missingIngredients: string[]) => {
@@ -428,17 +422,17 @@ export default function RecipesPage() {
         </div>
       )}
 
-      {/* 自分の適当レシピ集セクション（ログイン中のみ） */}
-      {user && rakutenFetched && !rakutenLoading && (
+      {/* みんなの適当レシピ集セクション（casual_recipesは全ユーザーに共有されている） */}
+      {rakutenFetched && !rakutenLoading && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-gray-800">自分の適当レシピ</h3>
-            <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">自分の適当レシピ</span>
+            <h3 className="font-semibold text-gray-800">みんなの適当レシピ</h3>
+            <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">共有レシピ</span>
           </div>
 
           {casualCandidates.length === 0 ? (
             <Card className="py-8 text-center">
-              <p className="text-gray-500 text-sm">まだ保存した適当レシピがありません</p>
+              <p className="text-gray-500 text-sm">まだ共有された適当レシピがありません</p>
               <Link href="/chat" className="text-xs text-emerald-600 hover:underline">AIレシピ相談で作ってみる</Link>
             </Card>
           ) : (
@@ -454,7 +448,7 @@ export default function RecipesPage() {
                       食材マッチ {candidate.matchScore}%
                     </Badge>
                     <span className="text-xs px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 flex items-center gap-1">
-                      <BookMarked size={10} /> 自分の適当レシピ
+                      <BookMarked size={10} /> 共有レシピ
                     </span>
                     {candidate.timeLabel && (
                       <span className="flex items-center gap-0.5 text-xs text-gray-400">
@@ -467,9 +461,7 @@ export default function RecipesPage() {
                       </span>
                     )}
                   </div>
-                  <Link href="/my-recipes" className="font-semibold text-gray-900 hover:text-emerald-600 transition-colors">
-                    {candidate.title}
-                  </Link>
+                  <p className="font-semibold text-gray-900">{candidate.title}</p>
                   {candidate.description && (
                     <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{candidate.description}</p>
                   )}
