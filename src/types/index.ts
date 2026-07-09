@@ -5,6 +5,7 @@ export type IngredientCategory =
   | "乳製品"
   | "調味料"
   | "穀物"
+  | "お菓子"
   | "その他";
 
 export interface Ingredient {
@@ -152,6 +153,41 @@ export interface RakutenRecipeSuggestion {
   missingIngredients: string[];
   matchScore: number;
   suggestionReason: string;
+}
+
+export type ChatRole = "user" | "assistant";
+
+export interface ChatMessage {
+  id: string;
+  sessionId: string;
+  role: ChatRole;
+  content: string;
+  createdAt: string;
+}
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CasualRecipeDifficulty = "easy" | "normal" | "hard";
+
+export interface CasualRecipe {
+  id: string;
+  title: string;
+  description?: string;
+  ingredients: string[];
+  steps: string[];
+  estimatedCost?: number;
+  cookingTimeMinutes?: number;
+  difficulty: CasualRecipeDifficulty;
+  vibe: string;
+  tags: string[];
+  sourceSessionId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DashboardStats {

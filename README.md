@@ -14,7 +14,9 @@
 | 買い物リスト | 不足食材を優先度付きで管理 | ✅ 実装済み |
 | 家計簿 | 食費の記録・月次/週次集計 | ✅ 実装済み |
 | ダッシュボード | 予算・期限・レシピを一覧表示 | ✅ 実装済み |
-| ユーザー認証 | ログイン・個人データ分離 | 🚧 未実装 |
+| ユーザー認証 | Supabase Authによるメール・パスワードログイン | ✅ 実装済み |
+| AIレシピ相談チャット | チャットで「大学生らしい適当レシピ」を作成 | ✅ 実装済み |
+| 適当レシピ集 | チャットから保存したレシピを検索・閲覧・削除 | ✅ 実装済み |
 
 ## 技術スタック
 
@@ -65,7 +67,13 @@ ALTER TABLE budget_records     DISABLE ROW LEVEL SECURITY;
 ALTER TABLE shopping_items     DISABLE ROW LEVEL SECURITY;
 ```
 
-### 4. 開発サーバーを起動
+続けて、AIレシピ相談・適当レシピ集・認証用のテーブルを作るため `supabase/add_auth_and_casual_recipes.sql` の内容も実行してください（`profiles` / `chat_sessions` / `chat_messages` / `casual_recipes` を作成し、RLSを有効化してユーザーごとにデータを分離します）。
+
+### 4. Supabase Auth の設定
+
+Supabase Dashboard → Authentication → Providers で Email を有効化してください（メール確認を無効にすると開発中の動作確認がスムーズです）。
+
+### 5. 開発サーバーを起動
 
 ```bash
 npm run dev
@@ -74,8 +82,7 @@ npm run dev
 
 ## 今後の予定
 
-- [ ] Supabase Auth によるユーザー認証
 - [ ] 月次・週次予算の画面から設定
-- [ ] レシピ削除機能
 - [ ] 食材の在庫減算（料理したら自動で数量を減らす）
+- [ ] チャット履歴（セッション一覧）の閲覧・切り替えUI
 - [ ] Vercel へのデプロイ

@@ -1,12 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChefHat, Sparkles, Clock, Wallet, Filter, ExternalLink, ShoppingCart } from "lucide-react";
+import { ChefHat, Sparkles, Clock, Wallet, Filter, ExternalLink, ShoppingCart, BookMarked } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils/currency";
+import { analyzeIngredientMatch } from "@/lib/rakutenRecipe";
+import { useSession } from "@/lib/auth/useSession";
 import {
   Ingredient,
   IngredientCategory,
@@ -15,9 +17,45 @@ import {
   RecipeIngredient,
   RecipeStep,
   RakutenRecipeSuggestion,
+  CasualRecipe,
 } from "@/types";
 
 const genres: RecipeGenre[] = ["和食", "洋食", "中華", "イタリアン", "その他"];
+
+type RecipeCandidateSource = "rakuten" | "casual";
+
+interface RecipeCandidate {
+  source: RecipeCandidateSource;
+  id: string;
+  title: string;
+  description?: string;
+  imageUrl?: string;
+  url?: string;
+  costLabel?: string;
+  timeLabel?: string;
+  matchScore: number;
+  matchedIngredients: string[];
+  missingIngredients: string[];
+  reason: string;
+}
+
+function mapCasualRecipe(row: Record<string, unknown>): CasualRecipe {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    description: (row.description as string) ?? undefined,
+    ingredients: (row.ingredients as string[]) ?? [],
+    steps: (row.steps as string[]) ?? [],
+    estimatedCost: row.estimated_cost != null ? Number(row.estimated_cost) : undefined,
+    cookingTimeMinutes: row.cooking_time_minutes != null ? Number(row.cooking_time_minutes) : undefined,
+    difficulty: (row.difficulty as CasualRecipe["difficulty"]) ?? "easy",
+    vibe: (row.vibe as string) ?? "大学生の適当レシピ",
+    tags: (row.tags as string[]) ?? [],
+    sourceSessionId: (row.source_session_id as string) ?? undefined,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
 
 function mapIngredient(row: Record<string, unknown>): Ingredient {
   return {
@@ -84,6 +122,8 @@ export default function RecipesPage() {
   const [rakutenError, setRakutenError] = useState("");
   const [rakutenFetched, setRakutenFetched] = useState(false);
   const [addedShoppingIds, setAddedShoppingIds] = useState<Set<string>>(new Set());
+  const [casualCandidates, setCasualCandidates] = useState<RecipeCandidate[]>([]);
+  const { user } = useSession();
 
   useEffect(() => {
     loadData();
@@ -152,6 +192,33 @@ export default function RecipesPage() {
       setRakutenFetched(true);
     } finally {
       setRakutenLoading(false);
+    }
+
+    // ログイン中なら、自分の適当レシピ集も検索対象にする（RLSにより自分のレシピのみ取得される）
+    if (user) {
+      const { data: casualRows } = await supabase.from("casual_recipes").select("*");
+      const ownedNames = ingredients.map((i) => i.name);
+      const candidates: RecipeCandidate[] = (casualRows || [])
+        .map((row) => mapCasualRecipe(row as Record<string, unknown>))
+        .map((recipe): RecipeCandidate => {
+          const { matched, missing, score } = analyzeIngredientMatch(recipe.ingredients, ownedNames);
+          return {
+            source: "casual",
+            id: recipe.id,
+            title: recipe.title,
+            description: recipe.description,
+            costLabel: recipe.estimatedCost != null ? formatCurrency(recipe.estimatedCost) : undefined,
+            timeLabel: recipe.cookingTimeMinutes != null ? `${recipe.cookingTimeMinutes}分` : undefined,
+            matchScore: score,
+            matchedIngredients: matched,
+            missingIngredients: missing,
+            reason: "AIとのチャットから生まれた自分の適当レシピ",
+          };
+        })
+        .sort((a, b) => b.matchScore - a.matchScore);
+      setCasualCandidates(candidates);
+    } else {
+      setCasualCandidates([]);
     }
   };
 
@@ -354,6 +421,69 @@ export default function RecipesPage() {
                       )}
                     </div>
                   </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 自分の適当レシピ集セクション（ログイン中のみ） */}
+      {user && rakutenFetched && !rakutenLoading && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-gray-800">自分の適当レシピ</h3>
+            <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">自分の適当レシピ</span>
+          </div>
+
+          {casualCandidates.length === 0 ? (
+            <Card className="py-8 text-center">
+              <p className="text-gray-500 text-sm">まだ保存した適当レシピがありません</p>
+              <Link href="/chat" className="text-xs text-emerald-600 hover:underline">AIレシピ相談で作ってみる</Link>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {casualCandidates.map((candidate) => (
+                <Card key={candidate.id} className="hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                    <Badge
+                      variant={
+                        candidate.matchScore >= 70 ? "success" : candidate.matchScore >= 40 ? "info" : "default"
+                      }
+                    >
+                      食材マッチ {candidate.matchScore}%
+                    </Badge>
+                    <span className="text-xs px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 flex items-center gap-1">
+                      <BookMarked size={10} /> 自分の適当レシピ
+                    </span>
+                    {candidate.timeLabel && (
+                      <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                        <Clock size={11} /> {candidate.timeLabel}
+                      </span>
+                    )}
+                    {candidate.costLabel && (
+                      <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                        <Wallet size={11} /> {candidate.costLabel}
+                      </span>
+                    )}
+                  </div>
+                  <Link href="/my-recipes" className="font-semibold text-gray-900 hover:text-emerald-600 transition-colors">
+                    {candidate.title}
+                  </Link>
+                  {candidate.description && (
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{candidate.description}</p>
+                  )}
+                  <p className="text-xs text-emerald-600 mt-1">{candidate.reason}</p>
+
+                  {candidate.matchedIngredients.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {candidate.matchedIngredients.slice(0, 4).map((ing) => (
+                        <span key={ing} className="text-xs px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200">
+                          ✓ {ing}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </Card>
               ))}
             </div>
