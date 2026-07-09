@@ -2,7 +2,6 @@ import Link from "next/link";
 import { AlertTriangle, TrendingUp, ChefHat, ShoppingCart, ArrowRight } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ExpiryBadge } from "@/components/ingredients/ExpiryBadge";
-import { SnackCharacterCard } from "@/components/SnackCharacterCard";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency, calcBudgetProgress } from "@/lib/utils/currency";
 import { getExpiryStatus, getCurrentYearMonth, formatYearMonth, getWeekRange } from "@/lib/utils/date";
@@ -55,10 +54,6 @@ export default async function DashboardPage() {
 
   const monthlySpent = (budgetRows || [])
     .filter((r) => (r.purchased_at as string).startsWith(currentYM))
-    .reduce((sum, r) => sum + Number(r.amount), 0);
-
-  const snackSpent = (budgetRows || [])
-    .filter((r) => (r.purchased_at as string).startsWith(currentYM) && r.category === "お菓子")
     .reduce((sum, r) => sum + Number(r.amount), 0);
 
   const weeklySpent = (budgetRows || [])
@@ -189,8 +184,6 @@ export default async function DashboardPage() {
           </div>
         )}
       </Card>
-
-      <SnackCharacterCard snackAmount={snackSpent} />
 
       <Card>
         <CardHeader>
