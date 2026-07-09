@@ -3,27 +3,13 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Bookmark, RotateCcw, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { AuthGuard } from "@/components/auth/AuthGuard";
 import { authFetch } from "@/lib/auth/authFetch";
 import { ChatMessage } from "@/types";
 
-type ChatMode = "suggest" | "record";
-
-const MODE_INFO: Record<ChatMode, { label: string; hint: string; placeholder: string }> = {
-  suggest: {
-    label: "AIに提案してもらう",
-    hint: "例: 「卵とご飯と醤油しかない。なんか作れる？」",
-    placeholder: "今ある食材や気分を教えてください",
-  },
-  record: {
-    label: "自分のレシピを登録する",
-    hint: "例: 「前に作った適当レシピを登録したい」と話しかけてみてください。AIが1つずつ質問します",
-    placeholder: "AIの質問に答えてください",
-  },
-};
+const CHAT_HINT = "例: 「前に作った適当レシピを登録したい」と話しかけてみてください。AIが1つずつ質問します";
+const CHAT_PLACEHOLDER = "AIの質問に答えてください";
 
 function ChatPageInner() {
-  const [mode, setMode] = useState<ChatMode>("suggest");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const [input, setInput] = useState("");
@@ -57,7 +43,7 @@ function ChatPageInner() {
       const res = await authFetch("/api/chat/recipe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userText, sessionId, mode }),
+        body: JSON.stringify({ message: userText, sessionId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "エラーが発生しました");
@@ -105,18 +91,12 @@ function ChatPageInner() {
     setError("");
   };
 
-  const handleModeChange = (next: ChatMode) => {
-    if (next === mode) return;
-    setMode(next);
-    handleNewSession();
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">AIレシピ相談</h2>
-          <p className="text-sm text-gray-500 mt-0.5">今ある食材・予算・気分に合わせて、大学生らしい適当レシピを相談できます</p>
+          <p className="text-sm text-gray-500 mt-0.5">自分が作ったことのある適当レシピを、AIと話しながら登録できます</p>
         </div>
         <Button variant="secondary" size="sm" onClick={handleNewSession}>
           <RotateCcw size={14} />
@@ -124,26 +104,12 @@ function ChatPageInner() {
         </Button>
       </div>
 
-      <div className="flex bg-gray-100 rounded-lg p-1 max-w-md">
-        {(Object.keys(MODE_INFO) as ChatMode[]).map((m) => (
-          <button
-            key={m}
-            onClick={() => handleModeChange(m)}
-            className={`flex-1 text-sm py-1.5 rounded-md font-medium transition-colors ${
-              mode === m ? "bg-white shadow-sm text-emerald-700" : "text-gray-500"
-            }`}
-          >
-            {MODE_INFO[m].label}
-          </button>
-        ))}
-      </div>
-
       <Card className="min-h-[50vh] flex flex-col">
         <div className="flex-1 space-y-3 overflow-y-auto max-h-[55vh] pr-1">
           {messages.length === 0 && (
             <div className="text-center py-10 text-gray-400 text-sm">
               <MessageCircle size={28} className="mx-auto mb-2 text-gray-200" />
-              {MODE_INFO[mode].hint}
+              {CHAT_HINT}
             </div>
           )}
           {messages.map((msg) => (
@@ -196,7 +162,7 @@ function ChatPageInner() {
                 handleSend();
               }
             }}
-            placeholder={MODE_INFO[mode].placeholder}
+            placeholder={CHAT_PLACEHOLDER}
             className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <Button onClick={handleSend} disabled={loading || !input.trim()}>
@@ -210,9 +176,5 @@ function ChatPageInner() {
 }
 
 export default function ChatPage() {
-  return (
-    <AuthGuard>
-      <ChatPageInner />
-    </AuthGuard>
-  );
+  return <ChatPageInner />;
 }
