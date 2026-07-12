@@ -10,8 +10,19 @@ const SYSTEM_PROMPT = `あなたは、大学生が過去に実際に作った「
 - 聞く項目の目安（順番）：①料理名 ②使った食材 ③作り方（手順） ④だいたいの費用 ⑤だいたいの調理時間 ⑥雑だけど美味しくするコツ
 - ユーザーの返答が短くても、次の項目に自然に進めてよい（無理に深掘りしすぎない）
 - 危険な調理（生焼けの肉・卵の加熱不足など）が含まれていたら、やんわり確認・注意する
-- 必要な項目がひととおり集まったら、最後に「これで登録できそうです！」に続けて、料理名・材料・手順・目安費用・調理時間・コツを箇条書きで要約する
-- 要約を出したら、「この内容で良ければ、下の『このレシピを保存』ボタンで共有レシピ集に登録できます」と伝える`;
+- 質問している間は、これまで通り自然な日本語の会話文で返答する
+
+必要な項目がひととおり集まったら、それ以降は会話文を一切書かず、次のJSON形式のみを出力してください（説明文・コードブロック記号「\`\`\`」は不要。JSON以外は絶対に出力しない）：
+{
+  "title": "料理名",
+  "description": "一言説明（1〜2文。雑さや手軽さが伝わる表現で）",
+  "ingredients": ["食材1（分量つき）", "食材2（分量つき）"],
+  "steps": ["手順1", "手順2"],
+  "estimated_cost": 目安費用（円・数値のみ）,
+  "cooking_time_minutes": 調理時間（分・数値のみ）,
+  "difficulty": "easy" または "normal" または "hard",
+  "tags": ["節約","時短","ズボラ","レンジ","一人暮らし" などから当てはまるもの]
+}`;
 
 const ACK_MESSAGE = "了解しました。作ったレシピについて1つずつ質問していきますね。";
 
@@ -47,13 +58,14 @@ export async function POST(req: NextRequest) {
       sessionId = newSession.id;
     }
 
-    // 直近の会話履歴を取得（AIへの文脈用）
-    const { data: history } = await userSupabase
+    // 直近の会話履歴を取得（AIへの文脈用）。新しい順に取ってから時系列順に戻す
+    const { data: recentHistory } = await userSupabase
       .from("chat_messages")
       .select("role, content")
       .eq("session_id", sessionId)
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(20);
+    const history = (recentHistory ?? []).slice().reverse();
 
     // ユーザーメッセージを保存
     await userSupabase.from("chat_messages").insert({
@@ -64,7 +76,7 @@ export async function POST(req: NextRequest) {
     });
 
     const reply = await generateReply({
-      history: (history ?? []) as { role: string; content: string }[],
+      history: history as { role: string; content: string }[],
       message,
     });
 

@@ -4,12 +4,16 @@ import { Send, Bookmark, RotateCcw, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { authFetch } from "@/lib/auth/authFetch";
+import { useSession } from "@/lib/auth/useSession";
+import { supabase } from "@/lib/supabase";
+import { RecipeTemplateCard, parseRecipeDraft } from "@/components/recipes/RecipeTemplateCard";
 import { ChatMessage } from "@/types";
 
 const CHAT_HINT = "例: 「前に作った適当レシピを登録したい」と話しかけてみてください。AIが1つずつ質問します";
 const CHAT_PLACEHOLDER = "AIの質問に答えてください";
 
 function ChatPageInner() {
+  const { user } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const [input, setInput] = useState("");
@@ -67,16 +71,25 @@ function ChatPageInner() {
   };
 
   const handleSaveRecipe = async (msg: ChatMessage) => {
+    const draft = parseRecipeDraft(msg.content);
+    if (!draft || !user) return;
+
     setSavingId(msg.id);
     setError("");
     try {
-      const res = await authFetch("/api/recipes/extract-casual", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assistantMessage: msg.content, sessionId }),
+      const { error: insertErr } = await supabase.from("casual_recipes").insert({
+        user_id: user.id,
+        title: draft.title,
+        description: draft.description || null,
+        ingredients: draft.ingredients,
+        steps: draft.steps,
+        estimated_cost: draft.estimatedCost ?? null,
+        cooking_time_minutes: draft.cookingTimeMinutes ?? null,
+        difficulty: draft.difficulty,
+        tags: draft.tags,
+        source_session_id: sessionId ?? null,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "保存に失敗しました");
+      if (insertErr) throw new Error(insertErr.message);
       setSavedIds((prev) => new Set(prev).add(msg.id));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "保存に失敗しました");
@@ -112,22 +125,17 @@ function ChatPageInner() {
               {CHAT_HINT}
             </div>
           )}
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`max-w-[80%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap ${
-                  msg.role === "user"
-                    ? "bg-emerald-600 text-white"
-                    : "bg-gray-100 text-gray-800"
-                }`}
-              >
-                {msg.content}
-                {msg.role === "assistant" && (
-                  <div className="mt-2">
+          {messages.map((msg) => {
+            const draft = msg.role === "assistant" ? parseRecipeDraft(msg.content) : null;
+            return (
+              <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                {draft ? (
+                  <div className="max-w-[90%] w-full rounded-xl border border-emerald-200 bg-emerald-50/50 px-3 py-3">
+                    <RecipeTemplateCard recipe={draft} />
                     <button
                       onClick={() => handleSaveRecipe(msg)}
                       disabled={savingId === msg.id || savedIds.has(msg.id)}
-                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="mt-3 flex items-center gap-1 text-xs px-2 py-1 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Bookmark size={11} />
                       {savedIds.has(msg.id)
@@ -137,10 +145,20 @@ function ChatPageInner() {
                         : "このレシピを保存"}
                     </button>
                   </div>
+                ) : (
+                  <div
+                    className={`max-w-[80%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap ${
+                      msg.role === "user"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
           {loading && (
             <div className="flex justify-start">
               <div className="bg-gray-100 text-gray-400 rounded-xl px-3 py-2 text-sm">考え中…</div>

@@ -111,7 +111,10 @@ function MyRecipesPageInner() {
             const isExpanded = expandedId === recipe.id;
             return (
               <Card key={recipe.id}>
-                <div className="flex items-start justify-between gap-3">
+                <div
+                  className="flex items-start justify-between gap-3 cursor-pointer"
+                  onClick={() => setExpandedId(isExpanded ? null : recipe.id)}
+                >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                       <Badge variant="info">{DIFFICULTY_LABEL[recipe.difficulty]}</Badge>
@@ -119,7 +122,7 @@ function MyRecipesPageInner() {
                         <Badge key={tag} variant="default">{tag}</Badge>
                       ))}
                     </div>
-                    <h3 className="font-semibold text-gray-900">{recipe.title}</h3>
+                    <h3 className="font-semibold text-gray-900 hover:text-emerald-600 transition-colors">{recipe.title}</h3>
                     {recipe.description && (
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{recipe.description}</p>
                     )}
@@ -137,14 +140,14 @@ function MyRecipesPageInner() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => setExpandedId(isExpanded ? null : recipe.id)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
+                    <span className="text-gray-400">
                       {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                    </button>
+                    </span>
                     <button
-                      onClick={() => handleDelete(recipe.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(recipe.id);
+                      }}
                       disabled={deletingId === recipe.id}
                       className="text-gray-300 hover:text-red-500 disabled:opacity-50"
                     >

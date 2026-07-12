@@ -174,8 +174,8 @@ export interface ChatSession {
 
 export type CasualRecipeDifficulty = "easy" | "normal" | "hard";
 
-export interface CasualRecipe {
-  id: string;
+// AIのチャットが最後に出すJSON（保存前）と、DBに保存済みのレシピで共通する項目
+export interface RecipeDraft {
   title: string;
   description?: string;
   ingredients: string[];
@@ -183,8 +183,12 @@ export interface CasualRecipe {
   estimatedCost?: number;
   cookingTimeMinutes?: number;
   difficulty: CasualRecipeDifficulty;
-  vibe: string;
   tags: string[];
+}
+
+export interface CasualRecipe extends RecipeDraft {
+  id: string;
+  vibe: string;
   sourceSessionId?: string;
   createdAt: string;
   updatedAt: string;
