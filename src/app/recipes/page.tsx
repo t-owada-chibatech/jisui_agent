@@ -52,6 +52,7 @@ function mapCasualRecipe(row: Record<string, unknown>): CasualRecipe {
     difficulty: (row.difficulty as CasualRecipe["difficulty"]) ?? "easy",
     vibe: (row.vibe as string) ?? "大学生の適当レシピ",
     tags: (row.tags as string[]) ?? [],
+    photoUrl: (row.photo_url as string) ?? undefined,
     sourceSessionId: (row.source_session_id as string) ?? undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -207,6 +208,7 @@ export default function RecipesPage() {
           id: recipe.id,
           title: recipe.title,
           description: recipe.description,
+          imageUrl: recipe.photoUrl,
           costLabel: recipe.estimatedCost != null ? formatCurrency(recipe.estimatedCost) : undefined,
           timeLabel: recipe.cookingTimeMinutes != null ? `${recipe.cookingTimeMinutes}分` : undefined,
           matchScore: score,
@@ -443,43 +445,57 @@ export default function RecipesPage() {
             <div className="grid gap-3">
               {casualCandidates.map((candidate) => (
                 <Card key={candidate.id} className="hover:shadow-md transition-shadow">
-                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                    <Badge
-                      variant={
-                        candidate.matchScore >= 70 ? "success" : candidate.matchScore >= 40 ? "info" : "default"
-                      }
-                    >
-                      食材マッチ {candidate.matchScore}%
-                    </Badge>
-                    <span className="text-xs px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 flex items-center gap-1">
-                      <BookMarked size={10} /> 共有レシピ
-                    </span>
-                    {candidate.timeLabel && (
-                      <span className="flex items-center gap-0.5 text-xs text-gray-400">
-                        <Clock size={11} /> {candidate.timeLabel}
-                      </span>
+                  <div className="flex gap-3">
+                    {candidate.imageUrl && (
+                      <div className="flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={candidate.imageUrl}
+                          alt={candidate.title}
+                          className="w-20 h-20 object-cover rounded-lg bg-gray-100"
+                        />
+                      </div>
                     )}
-                    {candidate.costLabel && (
-                      <span className="flex items-center gap-0.5 text-xs text-gray-400">
-                        <Wallet size={11} /> {candidate.costLabel}
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-semibold text-gray-900">{candidate.title}</p>
-                  {candidate.description && (
-                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{candidate.description}</p>
-                  )}
-                  <p className="text-xs text-emerald-600 mt-1">{candidate.reason}</p>
-
-                  {candidate.matchedIngredients.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {candidate.matchedIngredients.slice(0, 4).map((ing) => (
-                        <span key={ing} className="text-xs px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200">
-                          ✓ {ing}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        <Badge
+                          variant={
+                            candidate.matchScore >= 70 ? "success" : candidate.matchScore >= 40 ? "info" : "default"
+                          }
+                        >
+                          食材マッチ {candidate.matchScore}%
+                        </Badge>
+                        <span className="text-xs px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 flex items-center gap-1">
+                          <BookMarked size={10} /> 共有レシピ
                         </span>
-                      ))}
+                        {candidate.timeLabel && (
+                          <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                            <Clock size={11} /> {candidate.timeLabel}
+                          </span>
+                        )}
+                        {candidate.costLabel && (
+                          <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                            <Wallet size={11} /> {candidate.costLabel}
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-semibold text-gray-900">{candidate.title}</p>
+                      {candidate.description && (
+                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{candidate.description}</p>
+                      )}
+                      <p className="text-xs text-emerald-600 mt-1">{candidate.reason}</p>
+
+                      {candidate.matchedIngredients.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {candidate.matchedIngredients.slice(0, 4).map((ing) => (
+                            <span key={ing} className="text-xs px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200">
+                              ✓ {ing}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </Card>
               ))}
             </div>

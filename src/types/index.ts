@@ -189,6 +189,7 @@ export interface RecipeDraft {
 export interface CasualRecipe extends RecipeDraft {
   id: string;
   vibe: string;
+  photoUrl?: string;
   sourceSessionId?: string;
   createdAt: string;
   updatedAt: string;

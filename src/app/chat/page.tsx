@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Send, Bookmark, RotateCcw, MessageCircle } from "lucide-react";
+import { Send, Bookmark, RotateCcw, MessageCircle, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { authFetch } from "@/lib/auth/authFetch";
@@ -21,6 +21,8 @@ function ChatPageInner() {
   const [error, setError] = useState("");
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [photoFiles, setPhotoFiles] = useState<Record<string, File>>({});
+  const [photoPreviews, setPhotoPreviews] = useState<Record<string, string>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,6 +72,12 @@ function ChatPageInner() {
     }
   };
 
+  const handlePhotoSelect = (msgId: string, file: File | null) => {
+    if (!file) return;
+    setPhotoFiles((prev) => ({ ...prev, [msgId]: file }));
+    setPhotoPreviews((prev) => ({ ...prev, [msgId]: URL.createObjectURL(file) }));
+  };
+
   const handleSaveRecipe = async (msg: ChatMessage) => {
     const draft = parseRecipeDraft(msg.content);
     if (!draft || !user) return;
@@ -77,6 +85,17 @@ function ChatPageInner() {
     setSavingId(msg.id);
     setError("");
     try {
+      let photoUrl: string | null = null;
+      const photoFile = photoFiles[msg.id];
+      if (photoFile) {
+        const path = `${user.id}/${crypto.randomUUID()}-${photoFile.name}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("casual-recipe-photos")
+          .upload(path, photoFile);
+        if (uploadErr) throw new Error("写真のアップロードに失敗しました: " + uploadErr.message);
+        photoUrl = supabase.storage.from("casual-recipe-photos").getPublicUrl(path).data.publicUrl;
+      }
+
       const { error: insertErr } = await supabase.from("casual_recipes").insert({
         user_id: user.id,
         title: draft.title,
@@ -88,6 +107,7 @@ function ChatPageInner() {
         difficulty: draft.difficulty,
         tags: draft.tags,
         source_session_id: sessionId ?? null,
+        photo_url: photoUrl,
       });
       if (insertErr) throw new Error(insertErr.message);
       setSavedIds((prev) => new Set(prev).add(msg.id));
@@ -131,11 +151,23 @@ function ChatPageInner() {
               <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 {draft ? (
                   <div className="max-w-[90%] w-full rounded-xl border border-emerald-200 bg-emerald-50/50 px-3 py-3">
-                    <RecipeTemplateCard recipe={draft} />
+                    <RecipeTemplateCard recipe={draft} photoUrl={photoPreviews[msg.id]} />
+                    {!savedIds.has(msg.id) && (
+                      <label className="mt-3 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 cursor-pointer">
+                        <ImagePlus size={11} />
+                        {photoPreviews[msg.id] ? "写真を変更" : "写真を追加（任意）"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handlePhotoSelect(msg.id, e.target.files?.[0] ?? null)}
+                        />
+                      </label>
+                    )}
                     <button
                       onClick={() => handleSaveRecipe(msg)}
                       disabled={savingId === msg.id || savedIds.has(msg.id)}
-                      className="mt-3 flex items-center gap-1 text-xs px-2 py-1 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="mt-3 ml-2 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Bookmark size={11} />
                       {savedIds.has(msg.id)

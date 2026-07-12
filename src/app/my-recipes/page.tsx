@@ -27,6 +27,7 @@ function mapCasualRecipe(row: Record<string, unknown>): CasualRecipe {
     difficulty: (row.difficulty as CasualRecipeDifficulty) ?? "easy",
     vibe: (row.vibe as string) ?? "大学生の適当レシピ",
     tags: (row.tags as string[]) ?? [],
+    photoUrl: (row.photo_url as string) ?? undefined,
     sourceSessionId: (row.source_session_id as string) ?? undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -115,6 +116,14 @@ function MyRecipesPageInner() {
                   className="flex items-start justify-between gap-3 cursor-pointer"
                   onClick={() => setExpandedId(isExpanded ? null : recipe.id)}
                 >
+                  {recipe.photoUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={recipe.photoUrl}
+                      alt={recipe.title}
+                      className="w-16 h-16 object-cover rounded-lg bg-gray-100 flex-shrink-0"
+                    />
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                       <Badge variant="info">{DIFFICULTY_LABEL[recipe.difficulty]}</Badge>
