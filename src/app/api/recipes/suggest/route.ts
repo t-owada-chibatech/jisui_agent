@@ -56,7 +56,7 @@ ${constraints ? `【条件】\n${constraints}` : ""}
     "genre": "和食|洋食|中華|イタリアン|その他",
     "servings": 人数,
     "ingredients": [
-      { "ingredientName": "食材名", "quantity": 数量, "unit": "単位", "isOptional": false }
+      { "ingredientName": "食材名", "quantity": "数量（例: 1、200、少々、適量 など文字列で）", "unit": "単位", "isOptional": false }
     ],
     "steps": [
       { "stepOrder": 1, "description": "手順の説明（初心者でもわかる具体的な表現で）" }
@@ -75,17 +75,33 @@ ${constraints ? `【条件】\n${constraints}` : ""}
       { model: "gemini-2.5-flash" },
       { apiVersion: "v1" }
     );
-    const text = await withGeminiRetry("recipes/suggest", async () => {
-      const result = await model.generateContent(prompt);
-      return result.response.text();
-    });
 
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
+    // 生成されたJSONが壊れていることがまれにあるため、パース失敗時は生成からやり直す
+    let generatedRecipes: Array<Record<string, unknown>> | undefined;
+    const maxParseAttempts = 2;
+    for (let attempt = 1; attempt <= maxParseAttempts; attempt++) {
+      const text = await withGeminiRetry("recipes/suggest", async () => {
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+      });
+
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        console.error(`[recipes/suggest] JSON not found in response (attempt ${attempt}/${maxParseAttempts})`);
+        continue;
+      }
+      try {
+        generatedRecipes = JSON.parse(jsonMatch[0]);
+        break;
+      } catch (parseErr) {
+        console.error(`[recipes/suggest] JSON parse error (attempt ${attempt}/${maxParseAttempts})`, parseErr);
+      }
+    }
+
+    if (!generatedRecipes) {
       return NextResponse.json({ error: "レシピの生成に失敗しました" }, { status: 500 });
     }
 
-    const generatedRecipes = JSON.parse(jsonMatch[0]);
     const savedRecipes = [];
 
     for (const recipe of generatedRecipes) {
@@ -105,26 +121,34 @@ ${constraints ? `【条件】\n${constraints}` : ""}
 
       if (recipeErr || !savedRecipe) continue;
 
-      if (recipe.ingredients?.length > 0) {
-        await supabase.from("recipe_ingredients").insert(
-          recipe.ingredients.map((ing: Record<string, unknown>) => ({
-            recipe_id: savedRecipe.id,
-            ingredient_name: ing.ingredientName,
-            quantity: ing.quantity ?? null,
-            unit: ing.unit ?? null,
-            is_optional: ing.isOptional ?? false,
-          }))
-        );
+      // AIの出力キー名がぶれても拾えるようフォールバックしつつ、
+      // 食材名が取れない行は除外する（1行でもNOT NULL違反があると全件insertが失敗するため）
+      const ingredientRows = ((recipe.ingredients as Record<string, unknown>[]) ?? [])
+        .map((ing: Record<string, unknown>) => ({
+          recipe_id: savedRecipe.id,
+          ingredient_name: (ing.ingredientName ?? ing.name ?? ing.title) as string | undefined,
+          quantity: ing.quantity ?? null,
+          unit: ing.unit ?? null,
+          is_optional: ing.isOptional ?? false,
+        }))
+        .filter((row: { ingredient_name?: string }) => !!row.ingredient_name);
+
+      if (ingredientRows.length > 0) {
+        const { error: ingredientsErr } = await supabase.from("recipe_ingredients").insert(ingredientRows);
+        if (ingredientsErr) console.error("[recipes/suggest] recipe_ingredients insert error", ingredientsErr);
       }
 
-      if (recipe.steps?.length > 0) {
-        await supabase.from("recipe_steps").insert(
-          recipe.steps.map((step: Record<string, unknown>) => ({
-            recipe_id: savedRecipe.id,
-            step_order: step.stepOrder,
-            description: step.description,
-          }))
-        );
+      const stepRows = ((recipe.steps as Record<string, unknown>[]) ?? [])
+        .map((step: Record<string, unknown>) => ({
+          recipe_id: savedRecipe.id,
+          step_order: step.stepOrder,
+          description: step.description as string | undefined,
+        }))
+        .filter((row: { description?: string }) => !!row.description);
+
+      if (stepRows.length > 0) {
+        const { error: stepsErr } = await supabase.from("recipe_steps").insert(stepRows);
+        if (stepsErr) console.error("[recipes/suggest] recipe_steps insert error", stepsErr);
       }
 
       savedRecipes.push(savedRecipe.id);

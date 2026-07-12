@@ -79,7 +79,7 @@ function mapRecipe(row: Record<string, unknown>): Recipe {
       id: i.id as string,
       recipeId: i.recipe_id as string,
       ingredientName: i.ingredient_name as string,
-      quantity: i.quantity != null ? Number(i.quantity) : undefined,
+      quantity: (i.quantity as string) ?? undefined,
       unit: (i.unit as string) ?? undefined,
       isOptional: i.is_optional as boolean,
     })

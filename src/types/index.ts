@@ -24,7 +24,7 @@ export interface RecipeIngredient {
   id: string;
   recipeId: string;
   ingredientName: string;
-  quantity?: number;
+  quantity?: string; // 「少々」「適量」など数値化できない表現もあるためテキスト
   unit?: string;
   isOptional: boolean;
 }

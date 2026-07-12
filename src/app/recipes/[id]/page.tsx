@@ -101,7 +101,7 @@ export default function RecipeDetailPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {ing.quantity != null && <span className="text-sm text-gray-500">{ing.quantity as number} {ing.unit as string}</span>}
+                  {ing.quantity != null && <span className="text-sm text-gray-500">{ing.quantity as string} {ing.unit as string}</span>}
                   {!owned && !ing.is_optional && <Badge variant="warning">要購入</Badge>}
                 </div>
               </div>
