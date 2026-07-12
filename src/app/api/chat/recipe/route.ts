@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getRequestUser } from "@/lib/auth/serverSupabase";
+import { withGeminiRetry } from "@/lib/geminiRetry";
 
 const SYSTEM_PROMPT = `あなたは、大学生が過去に実際に作った「適当レシピ」を聞き取って記録するインタビュアーです。
 これはみんなで使う共有レシピ集に登録するためのものです。
@@ -109,6 +110,29 @@ export async function POST(req: NextRequest) {
   }
 }
 
+async function callGemini(input: {
+  history: { role: string; content: string }[];
+  message: string;
+}): Promise<string> {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  // v1 APIは systemInstruction 非対応のため、最初のターンにシステムプロンプトを埋め込む
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }, { apiVersion: "v1" });
+
+  const chat = model.startChat({
+    history: [
+      { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
+      { role: "model", parts: [{ text: ACK_MESSAGE }] },
+      ...input.history.map((h) => ({
+        role: h.role === "assistant" ? "model" : "user",
+        parts: [{ text: h.content }],
+      })),
+    ],
+  });
+
+  const result = await chat.sendMessage(input.message);
+  return result.response.text();
+}
+
 async function generateReply(input: {
   history: { role: string; content: string }[];
   message: string;
@@ -118,25 +142,8 @@ async function generateReply(input: {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    // v1 APIは systemInstruction 非対応のため、最初のターンにシステムプロンプトを埋め込む
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }, { apiVersion: "v1" });
-
-    const chat = model.startChat({
-      history: [
-        { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
-        { role: "model", parts: [{ text: ACK_MESSAGE }] },
-        ...input.history.map((h) => ({
-          role: h.role === "assistant" ? "model" : "user",
-          parts: [{ text: h.content }],
-        })),
-      ],
-    });
-
-    const result = await chat.sendMessage(input.message);
-    return result.response.text();
-  } catch (err) {
-    console.error("[chat/recipe] Gemini error", err);
+    return await withGeminiRetry("chat/recipe", () => callGemini(input));
+  } catch {
     return getMockReply(input.message);
   }
 }

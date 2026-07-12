@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getRequestUser } from "@/lib/auth/serverSupabase";
+import { withGeminiRetry } from "@/lib/geminiRetry";
 
 export async function POST(req: NextRequest) {
   const { client: supabase, user } = await getRequestUser(req);
@@ -74,8 +75,10 @@ ${constraints ? `【条件】\n${constraints}` : ""}
       { model: "gemini-2.5-flash" },
       { apiVersion: "v1" }
     );
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const text = await withGeminiRetry("recipes/suggest", async () => {
+      const result = await model.generateContent(prompt);
+      return result.response.text();
+    });
 
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {

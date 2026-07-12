@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ReceiptDraft, ReceiptItemDraft, ReceiptItemCategory } from "@/types";
+import { withGeminiRetry } from "@/lib/geminiRetry";
 
 const genId = () => Math.random().toString(36).slice(2, 11);
 
@@ -58,11 +59,13 @@ export async function analyzeReceiptImage(
     { apiVersion: "v1" }
   );
 
-  const result = await model.generateContent([
-    { inlineData: { mimeType, data: base64 } },
-    GEMINI_PROMPT,
-  ]);
-  const text = result.response.text();
+  const text = await withGeminiRetry("receipt/analyze", async () => {
+    const result = await model.generateContent([
+      { inlineData: { mimeType, data: base64 } },
+      GEMINI_PROMPT,
+    ]);
+    return result.response.text();
+  });
   return parseGeminiResponse(text);
 }
 

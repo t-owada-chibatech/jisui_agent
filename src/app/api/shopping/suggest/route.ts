@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AISuggestedIngredient } from "@/types";
+import { withGeminiRetry } from "@/lib/geminiRetry";
 
 export interface SuggestInput {
   ingredients: { name: string; quantity: number; unit: string; expiresAt?: string }[];
@@ -68,8 +69,10 @@ ${input.preferredGenres.length ? input.preferredGenres.join("、") : "指定な�
 JSONのみ返すこと（説明文・コードブロック記号不要）`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const text = await withGeminiRetry("shopping/suggest", async () => {
+      const result = await model.generateContent(prompt);
+      return result.response.text();
+    });
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) return suggestWithMock(input);
     const parsed = JSON.parse(jsonMatch[0]) as AISuggestedIngredient[];
