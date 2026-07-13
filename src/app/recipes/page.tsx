@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { analyzeIngredientMatch } from "@/lib/rakutenRecipe";
 import { useSession } from "@/lib/auth/useSession";
 import { authFetch } from "@/lib/auth/authFetch";
+import { RecipeTemplateCard } from "@/components/recipes/RecipeTemplateCard";
 import {
   Ingredient,
   IngredientCategory,
@@ -22,6 +23,13 @@ import {
 } from "@/types";
 
 const genres: RecipeGenre[] = ["和食", "洋食", "中華", "イタリアン", "その他"];
+
+type SuggestedRecipe = CasualRecipe & { matchType: "reused" | "generated" };
+
+const MATCH_TYPE_LABEL: Record<SuggestedRecipe["matchType"], string> = {
+  reused: "保存済みレシピから提案",
+  generated: "AIが新しく作成",
+};
 
 type RecipeCandidateSource = "rakuten" | "casual";
 
@@ -112,7 +120,8 @@ export default function RecipesPage() {
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState("");
-  const [lastAiCount, setLastAiCount] = useState(0);
+  const [suggestedRecipes, setSuggestedRecipes] = useState<SuggestedRecipe[]>([]);
+  const [suggestMeta, setSuggestMeta] = useState<{ reusedCount: number; generatedCount: number } | null>(null);
 
   const [budget, setBudget] = useState("");
   const [maxCookTime, setMaxCookTime] = useState("");
@@ -160,9 +169,8 @@ export default function RecipesPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      const newRecipes = (data.recipes as Array<Record<string, unknown>>).map(mapRecipe);
-      setRecipes((prev) => [...newRecipes, ...prev]);
-      setLastAiCount(newRecipes.length);
+      setSuggestedRecipes(data.recipes as SuggestedRecipe[]);
+      setSuggestMeta(data.meta ?? null);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "エラーが発生しました");
     } finally {
@@ -294,10 +302,53 @@ export default function RecipesPage() {
         </div>
         {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
         {rakutenError && <p className="mt-2 text-sm text-red-500">楽天: {rakutenError}</p>}
-        {lastAiCount > 0 && !aiLoading && (
-          <p className="mt-2 text-xs text-emerald-600">{lastAiCount}件のレシピを提案・保存しました</p>
+        {suggestMeta && !aiLoading && (
+          <p className="mt-2 text-xs text-emerald-600">
+            保存済みレシピから{suggestMeta.reusedCount}件、AIが新しく{suggestMeta.generatedCount}件提案しました
+          </p>
         )}
       </Card>
+
+      {/* AIレシピ提案結果（casual_recipesをRAG検索し、足りない分だけAIで新規生成） */}
+      {(suggestedRecipes.length > 0 || aiLoading) && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-gray-800">AIレシピ提案</h3>
+          </div>
+
+          {aiLoading && (
+            <div className="text-center py-8 text-gray-400 text-sm">似たレシピを検索中…</div>
+          )}
+
+          {!aiLoading && (
+            <div className="grid gap-3">
+              {suggestedRecipes.map((recipe) => {
+                const { score } = analyzeIngredientMatch(recipe.ingredients, ingredients.map((i) => i.name));
+                return (
+                  <Card key={recipe.id}>
+                    <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                      <Badge variant={score >= 70 ? "success" : score >= 40 ? "info" : "default"}>
+                        食材マッチ {score}%
+                      </Badge>
+                      <span
+                        className={`text-xs px-1.5 py-0.5 rounded border flex items-center gap-1 ${
+                          recipe.matchType === "reused"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}
+                      >
+                        {recipe.matchType === "reused" ? <BookMarked size={10} /> : <Sparkles size={10} />}
+                        {MATCH_TYPE_LABEL[recipe.matchType]}
+                      </span>
+                    </div>
+                    <RecipeTemplateCard recipe={recipe} photoUrl={recipe.photoUrl} />
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 楽天レシピ候補セクション */}
       {(rakutenFetched || rakutenLoading) && (
@@ -503,22 +554,15 @@ export default function RecipesPage() {
         </div>
       )}
 
-      {/* 既存のAI生成レシピ一覧 */}
-      {loading ? (
-        <div className="text-center py-12 text-gray-400 text-sm">読み込み中…</div>
-      ) : recipes.length === 0 ? (
-        <Card className="py-12 text-center">
-          <ChefHat size={40} className="text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-500 mb-1">まだレシピがありません</p>
-          <p className="text-xs text-gray-400">「AIでレシピを提案」ボタンを押してみましょう</p>
-        </Card>
-      ) : (
+      {/* 過去に生成したレシピ（旧構成時代の履歴。新しい提案はcasual_recipes側に保存される） */}
+      {!loading && recipes.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="font-semibold text-gray-800">過去に生成したレシピ</h3>
         <div className="grid gap-3">
-          {recipes.map((recipe, idx) => {
+          {recipes.map((recipe) => {
             const required = recipe.ingredients.filter((i) => !i.isOptional);
             const matched = required.filter((i) => ingredientNames.has(i.ingredientName)).length;
             const matchPct = required.length ? Math.round((matched / required.length) * 100) : 0;
-            const isNew = idx < lastAiCount;
             return (
               <Link key={recipe.id} href={`/recipes/${recipe.id}`}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
@@ -529,11 +573,6 @@ export default function RecipesPage() {
                         <Badge variant={matchPct === 100 ? "success" : matchPct >= 70 ? "info" : "default"}>
                           食材マッチ {matchPct}%
                         </Badge>
-                        {isNew && (
-                          <Badge variant="warning">
-                            <Sparkles size={10} className="mr-1" />AI提案
-                          </Badge>
-                        )}
                       </div>
                       <h3 className="font-semibold text-gray-900">{recipe.title}</h3>
                       {recipe.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{recipe.description}</p>}
@@ -549,6 +588,7 @@ export default function RecipesPage() {
               </Link>
             );
           })}
+        </div>
         </div>
       )}
     </div>

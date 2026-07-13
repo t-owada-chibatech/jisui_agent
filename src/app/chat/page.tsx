@@ -96,20 +96,24 @@ function ChatPageInner() {
         photoUrl = supabase.storage.from("casual-recipe-photos").getPublicUrl(path).data.publicUrl;
       }
 
-      const { error: insertErr } = await supabase.from("casual_recipes").insert({
-        user_id: user.id,
-        title: draft.title,
-        description: draft.description || null,
-        ingredients: draft.ingredients,
-        steps: draft.steps,
-        estimated_cost: draft.estimatedCost ?? null,
-        cooking_time_minutes: draft.cookingTimeMinutes ?? null,
-        difficulty: draft.difficulty,
-        tags: draft.tags,
-        source_session_id: sessionId ?? null,
-        photo_url: photoUrl,
+      const res = await authFetch("/api/casual-recipes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: draft.title,
+          description: draft.description,
+          ingredients: draft.ingredients,
+          steps: draft.steps,
+          estimatedCost: draft.estimatedCost,
+          cookingTimeMinutes: draft.cookingTimeMinutes,
+          difficulty: draft.difficulty,
+          tags: draft.tags,
+          sourceSessionId: sessionId,
+          photoUrl,
+        }),
       });
-      if (insertErr) throw new Error(insertErr.message);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "保存に失敗しました");
       setSavedIds((prev) => new Set(prev).add(msg.id));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "保存に失敗しました");

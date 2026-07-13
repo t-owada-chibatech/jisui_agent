@@ -186,11 +186,17 @@ export interface RecipeDraft {
   tags: string[];
 }
 
+// レシピがどこから来たか（RAG提案時にUIへ表示する）
+export type CasualRecipeSource = "user_posted" | "ai_generated" | "rakuten_based";
+
 export interface CasualRecipe extends RecipeDraft {
   id: string;
   vibe: string;
   photoUrl?: string;
   sourceSessionId?: string;
+  source?: CasualRecipeSource;
+  usageCount?: number;
+  similarity?: number;
   createdAt: string;
   updatedAt: string;
 }

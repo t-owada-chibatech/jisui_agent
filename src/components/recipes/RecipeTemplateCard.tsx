@@ -76,28 +76,39 @@ export function RecipeTemplateCard({ recipe, photoUrl }: { recipe: RecipeDraft; 
   );
 }
 
+// AIが返したレシピらしきオブジェクト（キーがスネークケースの場合もある）を
+// RecipeDraft の形に正規化する。titleが無ければ null。
+export function normalizeRecipeDraft(raw: unknown): RecipeDraft | null {
+  if (!raw || typeof raw !== "object" || typeof (raw as Record<string, unknown>).title !== "string") {
+    return null;
+  }
+  const r = raw as Record<string, unknown>;
+
+  const difficulty: CasualRecipeDifficulty =
+    r.difficulty === "normal" || r.difficulty === "hard" ? r.difficulty : "easy";
+
+  return {
+    title: r.title as string,
+    description: typeof r.description === "string" ? r.description : undefined,
+    ingredients: Array.isArray(r.ingredients) ? r.ingredients.map(String) : [],
+    steps: Array.isArray(r.steps) ? r.steps.map(String) : [],
+    estimatedCost: (r.estimated_cost ?? r.estimatedCost) != null ? Number(r.estimated_cost ?? r.estimatedCost) : undefined,
+    cookingTimeMinutes:
+      (r.cooking_time_minutes ?? r.cookingTimeMinutes) != null
+        ? Number(r.cooking_time_minutes ?? r.cookingTimeMinutes)
+        : undefined,
+    difficulty,
+    tags: Array.isArray(r.tags) ? r.tags.map(String) : [],
+  };
+}
+
 // AIの返信テキストから RecipeDraft のJSONを取り出す。失敗したら null。
 export function parseRecipeDraft(content: string): RecipeDraft | null {
   const match = content.match(/\{[\s\S]*\}/);
   if (!match) return null;
 
   try {
-    const raw = JSON.parse(match[0]);
-    if (!raw || typeof raw.title !== "string") return null;
-
-    const difficulty: CasualRecipeDifficulty =
-      raw.difficulty === "normal" || raw.difficulty === "hard" ? raw.difficulty : "easy";
-
-    return {
-      title: raw.title,
-      description: typeof raw.description === "string" ? raw.description : undefined,
-      ingredients: Array.isArray(raw.ingredients) ? raw.ingredients.map(String) : [],
-      steps: Array.isArray(raw.steps) ? raw.steps.map(String) : [],
-      estimatedCost: raw.estimated_cost != null ? Number(raw.estimated_cost) : undefined,
-      cookingTimeMinutes: raw.cooking_time_minutes != null ? Number(raw.cooking_time_minutes) : undefined,
-      difficulty,
-      tags: Array.isArray(raw.tags) ? raw.tags.map(String) : [],
-    };
+    return normalizeRecipeDraft(JSON.parse(match[0]));
   } catch {
     return null;
   }
