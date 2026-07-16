@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { UserCircle, Save } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { UserCircle, Save, Smartphone } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useSession } from "@/lib/auth/useSession";
@@ -13,6 +14,13 @@ export default function MyPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [pageUrl, setPageUrl] = useState("");
+
+  useEffect(() => {
+    // window.location.originはSSR時に取れないので、マウント後に設定する
+    // （このアプリが動いているアドレスをそのままQRコードにする）
+    setPageUrl(window.location.origin);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -49,7 +57,7 @@ export default function MyPage() {
   };
 
   return (
-    <div className="space-y-5 max-w-md">
+    <div className="space-y-5">
       <div>
         <h2 className="text-xl font-bold text-gray-900">マイページ</h2>
         <p className="text-sm text-gray-500 mt-0.5">
@@ -57,45 +65,62 @@ export default function MyPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <UserCircle size={16} className="text-gray-400" />
-            <CardTitle>プロフィール</CardTitle>
-          </div>
-        </CardHeader>
+      <div className="flex flex-col md:flex-row md:items-start gap-4">
+        <Card className="max-w-md flex-1">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <UserCircle size={16} className="text-gray-400" />
+              <CardTitle>プロフィール</CardTitle>
+            </div>
+          </CardHeader>
 
-        <div className="mb-3">
-          <label className="block text-xs font-medium text-gray-600 mb-1">メールアドレス</label>
-          <p className="text-sm text-gray-700 px-3 py-2 bg-gray-50 rounded-lg border border-gray-100">
-            {user?.email}
-          </p>
-        </div>
-
-        <form onSubmit={handleSave} className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">ユーザーネーム</label>
-            <input
-              type="text"
-              required
-              maxLength={20}
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              disabled={loading}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
-              placeholder="例: たろう"
-            />
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1">メールアドレス</label>
+            <p className="text-sm text-gray-700 px-3 py-2 bg-gray-50 rounded-lg border border-gray-100">
+              {user?.email}
+            </p>
           </div>
 
-          {error && <p className="text-xs text-red-500">{error}</p>}
-          {saved && <p className="text-xs text-emerald-600">保存しました</p>}
+          <form onSubmit={handleSave} className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">ユーザーネーム</label>
+              <input
+                type="text"
+                required
+                maxLength={20}
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                disabled={loading}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                placeholder="例: たろう"
+              />
+            </div>
 
-          <Button type="submit" disabled={loading || saving}>
-            <Save size={15} />
-            {saving ? "保存中…" : "保存する"}
-          </Button>
-        </form>
-      </Card>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            {saved && <p className="text-xs text-emerald-600">保存しました</p>}
+
+            <Button type="submit" disabled={loading || saving}>
+              <Save size={15} />
+              {saving ? "保存中…" : "保存する"}
+            </Button>
+          </form>
+        </Card>
+
+        <Card className="w-full md:w-44 flex-shrink-0 text-center">
+          <div className="flex items-center justify-center gap-1.5 mb-2">
+            <Smartphone size={14} className="text-gray-400" />
+            <CardTitle>スマホで開く</CardTitle>
+          </div>
+          {pageUrl ? (
+            <div className="flex justify-center">
+              <QRCodeSVG value={pageUrl} size={128} marginSize={2} />
+            </div>
+          ) : (
+            <div className="w-32 h-32 mx-auto bg-gray-50 rounded" />
+          )}
+          <p className="text-[10px] text-gray-400 mt-2 break-all">{pageUrl}</p>
+        </Card>
+      </div>
     </div>
   );
 }

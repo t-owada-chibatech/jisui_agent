@@ -16,8 +16,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ja">
       <body className={`${notoSans.className} bg-gray-50 min-h-screen`}>
         <Sidebar />
-        <main className="ml-60 min-h-screen">
-          <div className="max-w-5xl mx-auto px-6 py-6">
+        <main className="md:ml-60 min-h-screen">
+          <div className="max-w-5xl mx-auto px-4 py-6 pt-16 md:px-6 md:pt-6">
             <AuthGuard>{children}</AuthGuard>
           </div>
         </main>
