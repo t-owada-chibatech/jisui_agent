@@ -199,6 +199,7 @@ export interface CasualRecipe extends RecipeDraft {
   similarity?: number;
   userId?: string;
   authorName?: string;
+  authorAvatarUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

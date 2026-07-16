@@ -55,15 +55,26 @@ export async function createRecipeEmbedding(text: string): Promise<number[] | nu
   }
 }
 
-// PostgRESTのembed(`profiles(display_name)`)とRPCのフラットな`author_name`列の両方から投稿者名を取り出す
-function extractAuthorName(row: Record<string, unknown>): string | undefined {
-  if (typeof row.author_name === "string") return row.author_name;
-  const profiles = row.profiles as { display_name?: string } | { display_name?: string }[] | null | undefined;
-  if (Array.isArray(profiles)) return profiles[0]?.display_name;
-  return profiles?.display_name;
+// PostgRESTのembed(`profiles(display_name, avatar_url)`)とRPCのフラットな`author_name`/`author_avatar_url`列の
+// 両方から投稿者情報を取り出す
+function extractAuthorInfo(row: Record<string, unknown>): { name?: string; avatarUrl?: string } {
+  if (typeof row.author_name === "string" || typeof row.author_avatar_url === "string") {
+    return {
+      name: row.author_name as string | undefined,
+      avatarUrl: row.author_avatar_url as string | undefined,
+    };
+  }
+  const profiles = row.profiles as
+    | { display_name?: string; avatar_url?: string }
+    | { display_name?: string; avatar_url?: string }[]
+    | null
+    | undefined;
+  const profile = Array.isArray(profiles) ? profiles[0] : profiles;
+  return { name: profile?.display_name, avatarUrl: profile?.avatar_url };
 }
 
 function mapCasualRecipeRow(row: Record<string, unknown>): CasualRecipe {
+  const author = extractAuthorInfo(row);
   return {
     id: row.id as string,
     title: row.title as string,
@@ -80,7 +91,8 @@ function mapCasualRecipeRow(row: Record<string, unknown>): CasualRecipe {
     usageCount: row.usage_count != null ? Number(row.usage_count) : undefined,
     similarity: row.similarity != null ? Number(row.similarity) : undefined,
     userId: (row.user_id as string) ?? undefined,
-    authorName: extractAuthorName(row),
+    authorName: author.name,
+    authorAvatarUrl: author.avatarUrl,
     createdAt: row.created_at as string,
     updatedAt: (row.updated_at as string) ?? (row.created_at as string),
   };
@@ -100,7 +112,7 @@ async function keywordSearchCasualRecipes(
 
   const { data, error } = await supabase
     .from("casual_recipes")
-    .select("*, profiles(display_name)")
+    .select("*, profiles(display_name, avatar_url)")
     .or(orFilter)
     .order("usage_count", { ascending: false })
     .limit(matchCount);

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Search, Clock, Wallet, Trash2, BookMarked, ChevronDown, ChevronUp } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Avatar } from "@/components/ui/Avatar";
 import { useSession } from "@/lib/auth/useSession";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -16,8 +17,12 @@ const DIFFICULTY_LABEL: Record<CasualRecipeDifficulty, string> = {
 };
 
 function mapCasualRecipe(row: Record<string, unknown>): CasualRecipe {
-  const profiles = row.profiles as { display_name?: string } | { display_name?: string }[] | null | undefined;
-  const authorName = Array.isArray(profiles) ? profiles[0]?.display_name : profiles?.display_name;
+  const profiles = row.profiles as
+    | { display_name?: string; avatar_url?: string }
+    | { display_name?: string; avatar_url?: string }[]
+    | null
+    | undefined;
+  const profile = Array.isArray(profiles) ? profiles[0] : profiles;
   return {
     id: row.id as string,
     title: row.title as string,
@@ -32,7 +37,8 @@ function mapCasualRecipe(row: Record<string, unknown>): CasualRecipe {
     photoUrl: (row.photo_url as string) ?? undefined,
     sourceSessionId: (row.source_session_id as string) ?? undefined,
     userId: (row.user_id as string) ?? undefined,
-    authorName,
+    authorName: profile?.display_name,
+    authorAvatarUrl: profile?.avatar_url,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -52,7 +58,7 @@ function MyRecipesPageInner() {
     // ただし「適当レシピ集」はユーザー投稿のみを見せたいので、AI生成・楽天由来のものは除外する
     const { data } = await supabase
       .from("casual_recipes")
-      .select("*, profiles(display_name)")
+      .select("*, profiles(display_name, avatar_url)")
       .eq("source", "user_posted")
       .order("created_at", { ascending: false });
     setRecipes((data || []).map((r) => mapCasualRecipe(r as Record<string, unknown>)));
@@ -141,7 +147,8 @@ function MyRecipesPageInner() {
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{recipe.description}</p>
                     )}
                     {recipe.authorName && (
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                        <Avatar src={recipe.authorAvatarUrl} alt={recipe.authorName} size={14} />
                         投稿者: {recipe.authorName}
                         {recipe.userId === user?.id && <span className="text-emerald-600">（あなた）</span>}
                       </p>

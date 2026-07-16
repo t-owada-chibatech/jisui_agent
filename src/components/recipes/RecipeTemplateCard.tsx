@@ -1,5 +1,6 @@
 import { Clock, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { Avatar } from "@/components/ui/Avatar";
 import { formatCurrency } from "@/lib/utils/currency";
 import { RecipeDraft, CasualRecipeDifficulty } from "@/types";
 
@@ -14,10 +15,12 @@ export function RecipeTemplateCard({
   recipe,
   photoUrl,
   authorName,
+  authorAvatarUrl,
 }: {
   recipe: RecipeDraft;
   photoUrl?: string;
   authorName?: string;
+  authorAvatarUrl?: string;
 }) {
   return (
     <div className="space-y-3">
@@ -42,7 +45,12 @@ export function RecipeTemplateCard({
         {recipe.description && (
           <p className="text-sm text-gray-600 mt-0.5">{recipe.description}</p>
         )}
-        {authorName && <p className="text-xs text-gray-400 mt-0.5">投稿者: {authorName}</p>}
+        {authorName && (
+          <p className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+            <Avatar src={authorAvatarUrl} alt={authorName} size={14} />
+            投稿者: {authorName}
+          </p>
+        )}
       </div>
 
       <div className="flex items-center gap-4">

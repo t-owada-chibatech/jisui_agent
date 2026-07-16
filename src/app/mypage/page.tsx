@@ -1,15 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { UserCircle, Save, Smartphone } from "lucide-react";
+import { Camera, Save, Smartphone, UserCircle } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Avatar } from "@/components/ui/Avatar";
 import { useSession } from "@/lib/auth/useSession";
 import { supabase } from "@/lib/supabase";
 
 export default function MyPage() {
   const { user } = useSession();
   const [displayName, setDisplayName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -28,13 +32,20 @@ export default function MyPage() {
       setLoading(true);
       const { data } = await supabase
         .from("profiles")
-        .select("display_name")
+        .select("display_name, avatar_url")
         .eq("id", user.id)
         .single();
       setDisplayName((data?.display_name as string) ?? "");
+      setAvatarUrl((data?.avatar_url as string) ?? "");
       setLoading(false);
     })();
   }, [user]);
+
+  const handleAvatarSelect = (file: File | null) => {
+    if (!file) return;
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,14 +54,28 @@ export default function MyPage() {
     setError("");
     setSaved(false);
 
+    let newAvatarUrl = avatarUrl;
+    if (avatarFile) {
+      const path = `${user.id}/${crypto.randomUUID()}-${avatarFile.name}`;
+      const { error: uploadErr } = await supabase.storage.from("avatars").upload(path, avatarFile);
+      if (uploadErr) {
+        setError("写真のアップロードに失敗しました: " + uploadErr.message);
+        setSaving(false);
+        return;
+      }
+      newAvatarUrl = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+    }
+
     const trimmed = displayName.trim();
     const { error: err } = await supabase
       .from("profiles")
-      .upsert({ id: user.id, display_name: trimmed });
+      .upsert({ id: user.id, display_name: trimmed, avatar_url: newAvatarUrl || null });
 
     if (err) {
       setError(err.message);
     } else {
+      setAvatarUrl(newAvatarUrl);
+      setAvatarFile(null);
       setSaved(true);
     }
     setSaving(false);
@@ -73,6 +98,20 @@ export default function MyPage() {
               <CardTitle>プロフィール</CardTitle>
             </div>
           </CardHeader>
+
+          <div className="flex items-center gap-3 mb-4">
+            <Avatar src={avatarPreview || avatarUrl} alt={displayName} size={56} />
+            <label className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 cursor-pointer">
+              <Camera size={13} />
+              写真を変更
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleAvatarSelect(e.target.files?.[0] ?? null)}
+              />
+            </label>
+          </div>
 
           <div className="mb-3">
             <label className="block text-xs font-medium text-gray-600 mb-1">メールアドレス</label>
