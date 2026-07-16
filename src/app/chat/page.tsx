@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { authFetch } from "@/lib/auth/authFetch";
 import { useSession } from "@/lib/auth/useSession";
 import { supabase } from "@/lib/supabase";
+import { randomStoragePath } from "@/lib/utils/storage";
 import { RecipeTemplateCard, parseRecipeDraft } from "@/components/recipes/RecipeTemplateCard";
 import { ChatMessage } from "@/types";
 
@@ -88,7 +89,7 @@ function ChatPageInner() {
       let photoUrl: string | null = null;
       const photoFile = photoFiles[msg.id];
       if (photoFile) {
-        const path = `${user.id}/${crypto.randomUUID()}-${photoFile.name}`;
+        const path = randomStoragePath(user.id, photoFile);
         const { error: uploadErr } = await supabase.storage
           .from("casual-recipe-photos")
           .upload(path, photoFile);

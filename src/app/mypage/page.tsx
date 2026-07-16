@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { useSession } from "@/lib/auth/useSession";
 import { supabase } from "@/lib/supabase";
+import { randomStoragePath } from "@/lib/utils/storage";
 
 export default function MyPage() {
   const { user } = useSession();
@@ -56,7 +57,7 @@ export default function MyPage() {
 
     let newAvatarUrl = avatarUrl;
     if (avatarFile) {
-      const path = `${user.id}/${crypto.randomUUID()}-${avatarFile.name}`;
+      const path = randomStoragePath(user.id, avatarFile);
       const { error: uploadErr } = await supabase.storage.from("avatars").upload(path, avatarFile);
       if (uploadErr) {
         setError("写真のアップロードに失敗しました: " + uploadErr.message);
