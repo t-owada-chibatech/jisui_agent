@@ -209,8 +209,11 @@ export default function RecipesPage() {
       setRakutenLoading(false);
     }
 
-    // みんなが共有した適当レシピ集も検索対象にする（casual_recipesは全ユーザーに公開されている）
-    const { data: casualRows } = await supabase.from("casual_recipes").select("*, profiles(display_name)");
+    // みんなが共有した適当レシピ集も検索対象にする（casual_recipesは全ユーザーに公開されている、ユーザー投稿分のみ）
+    const { data: casualRows } = await supabase
+      .from("casual_recipes")
+      .select("*, profiles(display_name)")
+      .eq("source", "user_posted");
     const ownedNames = ingredients.map((i) => i.name);
     const candidates: RecipeCandidate[] = (casualRows || [])
       .map((row) => mapCasualRecipe(row as Record<string, unknown>))

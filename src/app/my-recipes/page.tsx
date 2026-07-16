@@ -49,9 +49,11 @@ function MyRecipesPageInner() {
   async function loadRecipes() {
     setLoading(true);
     // casual_recipesは全ユーザーに公開されている共有DBなので、全員分を投稿者名付きで表示する
+    // ただし「適当レシピ集」はユーザー投稿のみを見せたいので、AI生成・楽天由来のものは除外する
     const { data } = await supabase
       .from("casual_recipes")
       .select("*, profiles(display_name)")
+      .eq("source", "user_posted")
       .order("created_at", { ascending: false });
     setRecipes((data || []).map((r) => mapCasualRecipe(r as Record<string, unknown>)));
     setLoading(false);
