@@ -222,8 +222,24 @@ export default function RecipesPage() {
       .select("*, profiles(display_name, avatar_url)")
       .eq("source", "user_posted");
     const ownedNames = ingredients.map((i) => i.name);
+    const budgetNum = budget ? parseInt(budget) : undefined;
+    const maxCookTimeNum = maxCookTime ? parseInt(maxCookTime) : undefined;
+    const dislikedList = disliked ? disliked.split(/[,、]/).map((s) => s.trim()).filter(Boolean) : [];
     const candidates: RecipeCandidate[] = (casualRows || [])
       .map((row) => mapCasualRecipe(row as Record<string, unknown>))
+      .filter((recipe) => {
+        if (maxCookTimeNum != null && recipe.cookingTimeMinutes != null && recipe.cookingTimeMinutes > maxCookTimeNum) {
+          return false;
+        }
+        if (budgetNum != null && recipe.estimatedCost != null && recipe.estimatedCost > budgetNum) {
+          return false;
+        }
+        if (dislikedList.length > 0) {
+          const ingredientsText = recipe.ingredients.join(" ");
+          if (dislikedList.some((d) => ingredientsText.includes(d))) return false;
+        }
+        return true;
+      })
       .map((recipe): RecipeCandidate => {
         const { matched, missing, score } = analyzeIngredientMatch(recipe.ingredients, ownedNames);
         return {

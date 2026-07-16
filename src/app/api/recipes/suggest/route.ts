@@ -49,7 +49,14 @@ export async function POST(req: NextRequest) {
       keywords: ingredientNames,
     });
 
-    const reused = similarRecipes.slice(0, TARGET_COUNT);
+    // ベクトル類似検索は「雰囲気が近い」だけで調理時間・予算を保証しないため、ここで数値で絞り込む
+    const filteredSimilarRecipes = similarRecipes.filter((r) => {
+      if (maxCookTime && r.cookingTimeMinutes != null && r.cookingTimeMinutes > maxCookTime) return false;
+      if (budget && r.estimatedCost != null && r.estimatedCost > budget) return false;
+      return true;
+    });
+
+    const reused = filteredSimilarRecipes.slice(0, TARGET_COUNT);
     const neededCount = TARGET_COUNT - reused.length;
 
     if (reused.length > 0) {
