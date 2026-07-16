@@ -55,6 +55,14 @@ export async function createRecipeEmbedding(text: string): Promise<number[] | nu
   }
 }
 
+// PostgRESTのembed(`profiles(display_name)`)とRPCのフラットな`author_name`列の両方から投稿者名を取り出す
+function extractAuthorName(row: Record<string, unknown>): string | undefined {
+  if (typeof row.author_name === "string") return row.author_name;
+  const profiles = row.profiles as { display_name?: string } | { display_name?: string }[] | null | undefined;
+  if (Array.isArray(profiles)) return profiles[0]?.display_name;
+  return profiles?.display_name;
+}
+
 function mapCasualRecipeRow(row: Record<string, unknown>): CasualRecipe {
   return {
     id: row.id as string,
@@ -71,6 +79,8 @@ function mapCasualRecipeRow(row: Record<string, unknown>): CasualRecipe {
     source: (row.source as CasualRecipeSource) ?? "user_posted",
     usageCount: row.usage_count != null ? Number(row.usage_count) : undefined,
     similarity: row.similarity != null ? Number(row.similarity) : undefined,
+    userId: (row.user_id as string) ?? undefined,
+    authorName: extractAuthorName(row),
     createdAt: row.created_at as string,
     updatedAt: (row.updated_at as string) ?? (row.created_at as string),
   };
@@ -90,7 +100,7 @@ async function keywordSearchCasualRecipes(
 
   const { data, error } = await supabase
     .from("casual_recipes")
-    .select("*")
+    .select("*, profiles(display_name)")
     .or(orFilter)
     .order("usage_count", { ascending: false })
     .limit(matchCount);

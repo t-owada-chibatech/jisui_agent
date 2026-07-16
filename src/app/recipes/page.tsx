@@ -46,9 +46,12 @@ interface RecipeCandidate {
   matchedIngredients: string[];
   missingIngredients: string[];
   reason: string;
+  authorName?: string;
 }
 
 function mapCasualRecipe(row: Record<string, unknown>): CasualRecipe {
+  const profiles = row.profiles as { display_name?: string } | { display_name?: string }[] | null | undefined;
+  const authorName = Array.isArray(profiles) ? profiles[0]?.display_name : profiles?.display_name;
   return {
     id: row.id as string,
     title: row.title as string,
@@ -62,6 +65,8 @@ function mapCasualRecipe(row: Record<string, unknown>): CasualRecipe {
     tags: (row.tags as string[]) ?? [],
     photoUrl: (row.photo_url as string) ?? undefined,
     sourceSessionId: (row.source_session_id as string) ?? undefined,
+    userId: (row.user_id as string) ?? undefined,
+    authorName,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -205,7 +210,7 @@ export default function RecipesPage() {
     }
 
     // みんなが共有した適当レシピ集も検索対象にする（casual_recipesは全ユーザーに公開されている）
-    const { data: casualRows } = await supabase.from("casual_recipes").select("*");
+    const { data: casualRows } = await supabase.from("casual_recipes").select("*, profiles(display_name)");
     const ownedNames = ingredients.map((i) => i.name);
     const candidates: RecipeCandidate[] = (casualRows || [])
       .map((row) => mapCasualRecipe(row as Record<string, unknown>))
@@ -223,6 +228,7 @@ export default function RecipesPage() {
           matchedIngredients: matched,
           missingIngredients: missing,
           reason: "誰かがAIとのチャットから生み出して共有した適当レシピ",
+          authorName: recipe.authorName,
         };
       })
       .sort((a, b) => b.matchScore - a.matchScore);
@@ -341,7 +347,7 @@ export default function RecipesPage() {
                         {MATCH_TYPE_LABEL[recipe.matchType]}
                       </span>
                     </div>
-                    <RecipeTemplateCard recipe={recipe} photoUrl={recipe.photoUrl} />
+                    <RecipeTemplateCard recipe={recipe} photoUrl={recipe.photoUrl} authorName={recipe.authorName} />
                   </Card>
                 );
               })}
@@ -535,6 +541,9 @@ export default function RecipesPage() {
                         <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{candidate.description}</p>
                       )}
                       <p className="text-xs text-emerald-600 mt-1">{candidate.reason}</p>
+                      {candidate.authorName && (
+                        <p className="text-xs text-gray-400 mt-0.5">投稿者: {candidate.authorName}</p>
+                      )}
 
                       {candidate.matchedIngredients.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">

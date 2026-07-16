@@ -16,6 +16,8 @@ const DIFFICULTY_LABEL: Record<CasualRecipeDifficulty, string> = {
 };
 
 function mapCasualRecipe(row: Record<string, unknown>): CasualRecipe {
+  const profiles = row.profiles as { display_name?: string } | { display_name?: string }[] | null | undefined;
+  const authorName = Array.isArray(profiles) ? profiles[0]?.display_name : profiles?.display_name;
   return {
     id: row.id as string,
     title: row.title as string,
@@ -29,6 +31,8 @@ function mapCasualRecipe(row: Record<string, unknown>): CasualRecipe {
     tags: (row.tags as string[]) ?? [],
     photoUrl: (row.photo_url as string) ?? undefined,
     sourceSessionId: (row.source_session_id as string) ?? undefined,
+    userId: (row.user_id as string) ?? undefined,
+    authorName,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -42,20 +46,19 @@ function MyRecipesPageInner() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  async function loadRecipes(userId: string) {
+  async function loadRecipes() {
     setLoading(true);
-    // casual_recipesは全ユーザーに公開されているので、自分の投稿だけに絞り込む
+    // casual_recipesは全ユーザーに公開されている共有DBなので、全員分を投稿者名付きで表示する
     const { data } = await supabase
       .from("casual_recipes")
-      .select("*")
-      .eq("user_id", userId)
+      .select("*, profiles(display_name)")
       .order("created_at", { ascending: false });
     setRecipes((data || []).map((r) => mapCasualRecipe(r as Record<string, unknown>)));
     setLoading(false);
   }
 
   useEffect(() => {
-    if (user) loadRecipes(user.id);
+    if (user) loadRecipes();
   }, [user]);
 
   const handleDelete = async (id: string) => {
@@ -79,9 +82,9 @@ function MyRecipesPageInner() {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">自分の適当レシピ投稿</h2>
+        <h2 className="text-xl font-bold text-gray-900">みんなの適当レシピ集</h2>
         <p className="text-sm text-gray-500 mt-0.5">
-          あなたが共有した適当レシピです。みんなの分は<Link href="/recipes" className="text-emerald-600 hover:underline">レシピ提案</Link>から探せます
+          全員が共有した適当レシピの一覧です。食材から探したいときは<Link href="/recipes" className="text-emerald-600 hover:underline">レシピ提案</Link>も使えます
         </p>
       </div>
 
@@ -135,6 +138,12 @@ function MyRecipesPageInner() {
                     {recipe.description && (
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{recipe.description}</p>
                     )}
+                    {recipe.authorName && (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        投稿者: {recipe.authorName}
+                        {recipe.userId === user?.id && <span className="text-emerald-600">（あなた）</span>}
+                      </p>
+                    )}
                     <div className="flex items-center gap-4 mt-2">
                       {recipe.cookingTimeMinutes != null && (
                         <span className="flex items-center gap-1 text-xs text-gray-400">
@@ -152,16 +161,18 @@ function MyRecipesPageInner() {
                     <span className="text-gray-400">
                       {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                     </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(recipe.id);
-                      }}
-                      disabled={deletingId === recipe.id}
-                      className="text-gray-300 hover:text-red-500 disabled:opacity-50"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {recipe.userId === user?.id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(recipe.id);
+                        }}
+                        disabled={deletingId === recipe.id}
+                        className="text-gray-300 hover:text-red-500 disabled:opacity-50"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
 

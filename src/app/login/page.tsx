@@ -22,6 +22,7 @@ function LoginForm() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [signupDone, setSignupDone] = useState(false);
@@ -40,7 +41,11 @@ function LoginForm() {
         router.push(redirectTo);
       }
     } else {
-      const { error: err } = await supabase.auth.signUp({ email, password });
+      const { error: err } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: username.trim() } },
+      });
       if (err) {
         setError(err.message);
       } else {
@@ -82,6 +87,21 @@ function LoginForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
+          {mode === "signup" && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">ユーザーネーム</label>
+              <input
+                type="text"
+                required
+                maxLength={20}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="例: たろう"
+              />
+              <p className="text-[11px] text-gray-400 mt-1">適当レシピ集で「誰が投稿したか」の表示に使われます</p>
+            </div>
+          )}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">メールアドレス</label>
             <input

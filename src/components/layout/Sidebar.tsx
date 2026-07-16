@@ -12,6 +12,7 @@ import {
   ScanLine,
   MessageCircle,
   BookMarked,
+  UserCircle,
   LogIn,
   LogOut,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/shopping", label: "買い物リスト", icon: ShoppingCart },
   { href: "/budget", label: "家計簿", icon: Wallet },
   { href: "/receipt", label: "レシート取込", icon: ScanLine },
+  { href: "/mypage", label: "マイページ", icon: UserCircle },
 ];
 
 export function Sidebar() {
@@ -74,7 +76,9 @@ export function Sidebar() {
         {!loading && (
           user ? (
             <div className="space-y-1.5">
-              <p className="text-xs text-gray-500 truncate px-1">{user.email}</p>
+              <Link href="/mypage" className="block text-xs text-gray-500 truncate px-1 hover:text-emerald-600">
+                {user.email}
+              </Link>
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"

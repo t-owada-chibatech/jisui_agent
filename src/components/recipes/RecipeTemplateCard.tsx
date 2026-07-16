@@ -10,7 +10,15 @@ const DIFFICULTY_LABEL: Record<CasualRecipeDifficulty, string> = {
 };
 
 // AIが聞き取ったレシピJSON・保存済みレシピの両方で使う共通テンプレート表示
-export function RecipeTemplateCard({ recipe, photoUrl }: { recipe: RecipeDraft; photoUrl?: string }) {
+export function RecipeTemplateCard({
+  recipe,
+  photoUrl,
+  authorName,
+}: {
+  recipe: RecipeDraft;
+  photoUrl?: string;
+  authorName?: string;
+}) {
   return (
     <div className="space-y-3">
       {photoUrl && (
@@ -34,6 +42,7 @@ export function RecipeTemplateCard({ recipe, photoUrl }: { recipe: RecipeDraft; 
         {recipe.description && (
           <p className="text-sm text-gray-600 mt-0.5">{recipe.description}</p>
         )}
+        {authorName && <p className="text-xs text-gray-400 mt-0.5">投稿者: {authorName}</p>}
       </div>
 
       <div className="flex items-center gap-4">
