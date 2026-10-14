@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { IngredientForm } from "@/components/ingredients/IngredientForm";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Ingredient, IngredientCategory } from "@/types";
 
 export default function EditIngredientPage() {
@@ -55,10 +56,7 @@ export default function EditIngredientPage() {
 
   return (
     <div className="space-y-5 max-w-xl">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">食材を編集</h2>
-        <p className="text-sm text-gray-500 mt-0.5">{ingredient.name}</p>
-      </div>
+      <PageHeader title="食材を編集" subtitle={ingredient.name} />
       <IngredientForm mode="edit" initialData={ingredient} />
     </div>
   );

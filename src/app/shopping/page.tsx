@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Plus, ShoppingCart, Check, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/auth/useSession";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -179,12 +180,10 @@ export default function ShoppingPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">買い物</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
-            未購入 {pending.length}件 · 目安合計 {formatCurrency(totalEstimated)}
-          </p>
-        </div>
+        <PageHeader
+          title="買い物"
+          subtitle={<>未購入 {pending.length}件 · 目安合計 {formatCurrency(totalEstimated)}</>}
+        />
       </div>
 
       {/* 手動追加フォーム */}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils/currency";
 import { analyzeIngredientMatch } from "@/lib/rakutenRecipe";
@@ -283,10 +284,7 @@ export default function RecipesPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">レシピ提案</h2>
-        <p className="text-sm text-gray-500 mt-0.5">登録済みの食材 {ingredients.length}種類から提案</p>
-      </div>
+      <PageHeader title="レシピ提案" subtitle={<>登録済みの食材 {ingredients.length}種類から提案</>} />
 
       <Card>
         <CardHeader>

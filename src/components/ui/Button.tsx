@@ -1,6 +1,8 @@
 "use client";
 import { clsx } from "clsx";
 import { ButtonHTMLAttributes } from "react";
+import { useDashboardTheme } from "@/lib/theme/ThemeContext";
+import { themeTokens } from "@/lib/theme/tokens";
 
 type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
 type ButtonSize = "sm" | "md" | "lg";
@@ -12,7 +14,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: "bg-emerald-600 hover:bg-emerald-700 text-white",
+  primary: "text-white hover:brightness-110",
   secondary: "bg-gray-100 hover:bg-gray-200 text-gray-700",
   danger: "bg-red-500 hover:bg-red-600 text-white",
   ghost: "bg-transparent hover:bg-gray-100 text-gray-600",
@@ -30,17 +32,26 @@ export function Button({
   children,
   className,
   disabled,
+  style,
   ...props
 }: ButtonProps) {
+  const { theme } = useDashboardTheme();
+  const t = themeTokens[theme];
+
   return (
     <button
       className={clsx(
-        "inline-flex items-center gap-1.5 rounded-lg font-medium transition-colors",
+        "inline-flex items-center gap-1.5 font-medium transition-all",
         variantStyles[variant],
         sizeStyles[size],
         disabled && "opacity-50 cursor-not-allowed",
         className
       )}
+      style={{
+        borderRadius: t.radius,
+        ...(variant === "primary" ? { background: t.buttonPrimaryBg, color: t.buttonPrimaryText } : {}),
+        ...style,
+      }}
       disabled={disabled}
       {...props}
     >

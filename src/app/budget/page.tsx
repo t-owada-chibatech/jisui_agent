@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency, calcBudgetProgress } from "@/lib/utils/currency";
 import { formatDate, formatYearMonth, getCurrentYearMonth, getWeekRange } from "@/lib/utils/date";
@@ -75,10 +76,7 @@ export default function BudgetPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">家計簿</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{formatYearMonth(currentYM)}</p>
-        </div>
+        <PageHeader title="家計簿" subtitle={formatYearMonth(currentYM)} />
         <Link href="/budget/new">
           <Button><Plus size={16} />支出を追加</Button>
         </Link>

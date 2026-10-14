@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Camera, Save, Smartphone, UserCircle } from "lucide-react";
+import { Camera, Save, Smartphone, UserCircle, Palette } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
+import { ThemeSwitcher } from "@/components/dashboard/ThemeSwitcher";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useSession } from "@/lib/auth/useSession";
 import { supabase } from "@/lib/supabase";
 import { randomStoragePath } from "@/lib/utils/storage";
@@ -84,12 +86,10 @@ export default function MyPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">マイページ</h2>
-        <p className="text-sm text-gray-500 mt-0.5">
-          適当レシピ集で「誰が投稿したか」表示されるユーザーネームを変更できます
-        </p>
-      </div>
+      <PageHeader
+        title="マイページ"
+        subtitle="適当レシピ集で「誰が投稿したか」表示されるユーザーネームを変更できます"
+      />
 
       <div className="flex flex-col md:flex-row md:items-start gap-4">
         <Card className="max-w-md flex-1">
@@ -161,6 +161,19 @@ export default function MyPage() {
           <p className="text-[10px] text-gray-400 mt-2 break-all">{pageUrl}</p>
         </Card>
       </div>
+
+      <Card className="max-w-md">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Palette size={16} className="text-gray-400" />
+            <CardTitle>表示テーマ</CardTitle>
+          </div>
+        </CardHeader>
+        <p className="text-xs text-gray-500 mb-3">
+          ダッシュボードの見た目を好きなテイストに変更できます
+        </p>
+        <ThemeSwitcher />
+      </Card>
     </div>
   );
 }

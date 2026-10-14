@@ -1,14 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { AlertTriangle, TrendingUp, ChefHat, ShoppingCart, ArrowRight } from "lucide-react";
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
-import { ExpiryBadge } from "@/components/ingredients/ExpiryBadge";
 import { supabase } from "@/lib/supabase";
-import { formatCurrency, calcBudgetProgress } from "@/lib/utils/currency";
-import { getExpiryStatus, getCurrentYearMonth, formatYearMonth, getWeekRange } from "@/lib/utils/date";
+import { useSession } from "@/lib/auth/useSession";
+import { getExpiryStatus, getCurrentYearMonth, getWeekRange } from "@/lib/utils/date";
 import { Ingredient, IngredientCategory } from "@/types";
-import { clsx } from "clsx";
+import { useDashboardTheme } from "@/lib/theme/ThemeContext";
+import { DashboardPopView } from "@/components/dashboard/DashboardPopView";
+import { DashboardModernView } from "@/components/dashboard/DashboardModernView";
+import { DashboardCuteView } from "@/components/dashboard/DashboardCuteView";
+import { RecipeMatch } from "@/components/dashboard/types";
 
 function mapIngredient(row: Record<string, unknown>): Ingredient {
   return {
@@ -24,31 +24,26 @@ function mapIngredient(row: Record<string, unknown>): Ingredient {
   };
 }
 
-interface RecipeMatch {
-  id: string;
-  title: string;
-  cookTimeMin: number;
-  estimatedCost: number;
-  matchedCount: number;
-  totalIngredientCount: number;
-}
-
 export default function DashboardPage() {
+  const { theme } = useDashboardTheme();
+  const { user } = useSession();
   const currentYM = getCurrentYearMonth();
   const [loading, setLoading] = useState(true);
+  const [displayName, setDisplayName] = useState("ゲスト");
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [monthlyBudget, setMonthlyBudget] = useState(20000);
   const [weeklyBudget, setWeeklyBudget] = useState(5000);
   const [weekStart, setWeekStart] = useState(new Date().toISOString().split("T")[0]);
   const [monthlySpent, setMonthlySpent] = useState(0);
   const [weeklySpent, setWeeklySpent] = useState(0);
+  const [recordDays, setRecordDays] = useState(0);
   const [shoppingRows, setShoppingRows] = useState<Record<string, unknown>[]>([]);
   const [recipesWithMatch, setRecipesWithMatch] = useState<RecipeMatch[]>([]);
 
   useEffect(() => {
     loadDashboard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   async function loadDashboard() {
     setLoading(true);
@@ -59,13 +54,22 @@ export default function DashboardPage() {
       { data: weeklyBudgetRow },
       { data: shoppingData },
       { data: recipeRows },
+      profileResult,
     ] = await Promise.all([
-      supabase.from("ingredients").select("*").order("expires_at", { ascending: true, nullsFirst: false }),
+      supabase.from("ingredients").select("*").is("discarded_at", null).order("expires_at", { ascending: true, nullsFirst: false }),
       supabase.from("budget_records").select("*"),
       supabase.from("monthly_budgets").select("*").eq("year_month", currentYM).maybeSingle(),
       supabase.from("weekly_budgets").select("*").order("week_start", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("shopping_items").select("*").eq("is_purchased", false).order("priority", { ascending: false }).limit(5),
-      supabase.from("recipes").select("*, recipe_ingredients(*)").order("created_at", { ascending: false }).limit(10),
+      user
+        ? supabase
+            .from("casual_recipes")
+            .select("id, title, cooking_time_minutes, estimated_cost, ingredients")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(10)
+        : Promise.resolve({ data: [] }),
+      user ? supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
 
     const mappedIngredients = (ingredientRows || []).map(mapIngredient);
@@ -85,19 +89,24 @@ export default function DashboardPage() {
       .filter((r) => (r.purchased_at as string) >= wStart && (r.purchased_at as string) <= weekEndStr)
       .reduce((sum, r) => sum + Number(r.amount), 0);
 
+    const daysThisMonth = new Set(
+      (budgetRows || [])
+        .filter((r) => (r.purchased_at as string).startsWith(currentYM))
+        .map((r) => (r.purchased_at as string).split("T")[0])
+    );
+
     const ingredientNames = new Set(mappedIngredients.map((i) => i.name));
     const matches: RecipeMatch[] = (recipeRows || [])
       .map((r) => {
-        const ings = (r.recipe_ingredients as Array<Record<string, unknown>>) || [];
-        const required = ings.filter((i) => !i.is_optional);
-        const matched = required.filter((i) => ingredientNames.has(i.ingredient_name as string)).length;
+        const ings = (r.ingredients as string[]) || [];
+        const matched = ings.filter((name) => ingredientNames.has(name)).length;
         return {
           id: r.id as string,
           title: r.title as string,
-          cookTimeMin: r.cook_time_min as number,
-          estimatedCost: Number(r.estimated_cost),
+          cookTimeMin: (r.cooking_time_minutes as number) ?? 0,
+          estimatedCost: Number(r.estimated_cost ?? 0),
           matchedCount: matched,
-          totalIngredientCount: required.length,
+          totalIngredientCount: ings.length,
         };
       })
       .sort((a, b) => {
@@ -113,8 +122,10 @@ export default function DashboardPage() {
     setWeekStart(wStart);
     setMonthlySpent(mSpent);
     setWeeklySpent(wSpent);
+    setRecordDays(daysThisMonth.size);
     setShoppingRows((shoppingData || []) as Record<string, unknown>[]);
     setRecipesWithMatch(matches);
+    setDisplayName((profileResult?.data?.display_name as string) || "ゲスト");
     setLoading(false);
   }
 
@@ -126,139 +137,28 @@ export default function DashboardPage() {
     ["expired", "urgent", "soon"].includes(getExpiryStatus(i.expiresAt))
   );
 
-  const monthlyProgress = calcBudgetProgress(monthlySpent, monthlyBudget);
-  const weeklyProgress = calcBudgetProgress(weeklySpent, weeklyBudget);
+  const dateLabel = new Date().toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">ダッシュボード</h2>
-        <p className="text-sm text-gray-500 mt-0.5">{formatYearMonth(currentYM)}</p>
-      </div>
+  const viewProps = {
+    displayName,
+    dateLabel,
+    recordDays,
+    monthlySpent,
+    monthlyBudget,
+    weeklySpent,
+    weeklyBudget,
+    weekRangeLabel: getWeekRange(weekStart),
+    expiringIngredients,
+    recipesWithMatch,
+    shoppingRows,
+  };
 
-      <div className="grid grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>今月の食費</CardTitle>
-            <TrendingUp size={16} className="text-gray-400" />
-          </CardHeader>
-          <div className="space-y-2">
-            <div className="flex items-end gap-1">
-              <span className="text-2xl font-bold text-gray-900">{formatCurrency(monthlySpent)}</span>
-              <span className="text-sm text-gray-400 mb-0.5">/ {formatCurrency(monthlyBudget)}</span>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-2">
-              <div className={clsx("h-2 rounded-full transition-all", monthlyProgress >= 90 ? "bg-red-500" : monthlyProgress >= 70 ? "bg-yellow-500" : "bg-emerald-500")} style={{ width: `${monthlyProgress}%` }} />
-            </div>
-            <p className="text-xs text-gray-500">残り <span className="font-semibold text-gray-700">{formatCurrency(monthlyBudget - monthlySpent)}</span></p>
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>今週の食費</CardTitle>
-            <TrendingUp size={16} className="text-gray-400" />
-          </CardHeader>
-          <div className="space-y-2">
-            <div className="flex items-end gap-1">
-              <span className="text-2xl font-bold text-gray-900">{formatCurrency(weeklySpent)}</span>
-              <span className="text-sm text-gray-400 mb-0.5">/ {formatCurrency(weeklyBudget)}</span>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-2">
-              <div className={clsx("h-2 rounded-full transition-all", weeklyProgress >= 90 ? "bg-red-500" : weeklyProgress >= 70 ? "bg-yellow-500" : "bg-emerald-500")} style={{ width: `${weeklyProgress}%` }} />
-            </div>
-            <p className="text-xs text-gray-500">{getWeekRange(weekStart)}</p>
-          </div>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={16} className="text-yellow-500" />
-            <CardTitle>賞味期限が近い食材</CardTitle>
-          </div>
-          <Link href="/ingredients" className="text-xs text-emerald-600 hover:underline flex items-center gap-1">
-            すべて見る <ArrowRight size={12} />
-          </Link>
-        </CardHeader>
-        {expiringIngredients.length === 0 ? (
-          <p className="text-sm text-gray-400 py-2">期限が近い食材はありません</p>
-        ) : (
-          <div className="space-y-2">
-            {expiringIngredients.slice(0, 5).map((ing) => (
-              <div key={ing.id} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-800">{ing.name}</span>
-                  <span className="text-xs text-gray-400">{ing.quantity}{ing.unit}</span>
-                </div>
-                <ExpiryBadge expiresAt={ing.expiresAt} />
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <ChefHat size={16} className="text-emerald-500" />
-            <CardTitle>今日作れそうなレシピ</CardTitle>
-          </div>
-          <Link href="/recipes" className="text-xs text-emerald-600 hover:underline flex items-center gap-1">
-            AI提案を見る <ArrowRight size={12} />
-          </Link>
-        </CardHeader>
-        {recipesWithMatch.length === 0 ? (
-          <p className="text-sm text-gray-400 py-2">
-            まだレシピがありません。<Link href="/recipes" className="text-emerald-600 underline">AIに提案してもらいましょう</Link>
-          </p>
-        ) : (
-          <div className="space-y-1">
-            {recipesWithMatch.map((recipe) => {
-              const matchPct = recipe.totalIngredientCount ? Math.round((recipe.matchedCount / recipe.totalIngredientCount) * 100) : 0;
-              return (
-                <Link key={recipe.id} href={`/recipes/${recipe.id}`} className="block">
-                  <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{recipe.title}</p>
-                      <p className="text-xs text-gray-400">{recipe.cookTimeMin}分 · {formatCurrency(recipe.estimatedCost)}</p>
-                    </div>
-                    <span className={clsx("text-xs px-2 py-0.5 rounded font-medium", matchPct === 100 ? "bg-green-100 text-green-700" : matchPct >= 70 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600")}>
-                      食材 {recipe.matchedCount}/{recipe.totalIngredientCount}
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <ShoppingCart size={16} className="text-blue-500" />
-            <CardTitle>次に買うべき食材</CardTitle>
-          </div>
-          <Link href="/shopping" className="text-xs text-emerald-600 hover:underline flex items-center gap-1">
-            すべて見る <ArrowRight size={12} />
-          </Link>
-        </CardHeader>
-        {shoppingRows.length === 0 ? (
-          <p className="text-sm text-gray-400 py-2">買い物リストは空です</p>
-        ) : (
-          <div className="space-y-1.5">
-            {shoppingRows.map((item, idx) => (
-              <div key={item.id as string} className="flex items-center gap-3 py-1.5">
-                <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-xs flex items-center justify-center font-bold flex-shrink-0">{idx + 1}</span>
-                <span className="text-sm text-gray-800 flex-1">{item.ingredient_name as string}</span>
-                {item.estimated_price != null && <span className="text-xs text-gray-400">{formatCurrency(Number(item.estimated_price))}</span>}
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-    </div>
-  );
+  if (theme === "pop") return <DashboardPopView {...viewProps} />;
+  if (theme === "cute") return <DashboardCuteView {...viewProps} />;
+  return <DashboardModernView {...viewProps} />;
 }

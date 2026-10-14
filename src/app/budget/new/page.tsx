@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/auth/useSession";
 import { BudgetCategory } from "@/types";
@@ -54,10 +55,7 @@ export default function NewBudgetPage() {
 
   return (
     <div className="space-y-5 max-w-xl">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">支出を追加</h2>
-        <p className="text-sm text-gray-500 mt-0.5">食費の支出を記録します</p>
-      </div>
+      <PageHeader title="支出を追加" subtitle="食費の支出を記録します" />
 
       <form onSubmit={handleSubmit}>
         <Card className="space-y-4">

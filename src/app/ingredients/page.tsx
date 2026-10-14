@@ -5,6 +5,7 @@ import { Plus, Trash2, ChevronDown, ChevronUp, AlertTriangle } from "lucide-reac
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ExpiryBadge } from "@/components/ingredients/ExpiryBadge";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { supabase } from "@/lib/supabase";
 import { formatDate, getExpiryStatus } from "@/lib/utils/date";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -130,10 +131,7 @@ export default function IngredientsPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">食材管理</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{ingredients.length}件の食材</p>
-        </div>
+        <PageHeader title="食材管理" subtitle={`${ingredients.length}件の食材`} />
         <div className="flex items-center gap-2">
           {expiredIds.length > 0 && (
             <Button

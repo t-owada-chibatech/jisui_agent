@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { useSession } from "@/lib/auth/useSession";
 import { supabase } from "@/lib/supabase";
+import { useDashboardTheme } from "@/lib/theme/ThemeContext";
+import { themeTokens } from "@/lib/theme/tokens";
 
 const navItems = [
   { href: "/", label: "ダッシュボード", icon: LayoutDashboard },
@@ -38,6 +40,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useSession();
+  const { theme } = useDashboardTheme();
+  const t = themeTokens[theme];
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -100,12 +104,11 @@ export function Sidebar() {
                 onClick={() => setIsOpen(false)}
                 className={clsx(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  !isActive && "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 )}
+                style={isActive ? { background: t.sidebarActiveBg, color: t.sidebarActiveText } : undefined}
               >
-                <Icon size={18} className={isActive ? "text-emerald-600" : "text-gray-400"} />
+                <Icon size={18} style={{ color: isActive ? t.sidebarActiveIcon : "#9CA3AF" }} />
                 {label}
               </Link>
             );

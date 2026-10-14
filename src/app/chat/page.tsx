@@ -3,10 +3,12 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Bookmark, RotateCcw, MessageCircle, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { authFetch } from "@/lib/auth/authFetch";
 import { useSession } from "@/lib/auth/useSession";
 import { supabase } from "@/lib/supabase";
 import { randomStoragePath } from "@/lib/utils/storage";
+import { cropToSquare } from "@/lib/utils/image";
 import { RecipeTemplateCard, parseRecipeDraft } from "@/components/recipes/RecipeTemplateCard";
 import { ChatMessage } from "@/types";
 
@@ -73,10 +75,12 @@ function ChatPageInner() {
     }
   };
 
-  const handlePhotoSelect = (msgId: string, file: File | null) => {
+  const handlePhotoSelect = async (msgId: string, file: File | null) => {
     if (!file) return;
-    setPhotoFiles((prev) => ({ ...prev, [msgId]: file }));
-    setPhotoPreviews((prev) => ({ ...prev, [msgId]: URL.createObjectURL(file) }));
+    // インスタのフィードと同じ正方形(1:1)に自動トリミングしてから保存する
+    const squared = await cropToSquare(file);
+    setPhotoFiles((prev) => ({ ...prev, [msgId]: squared }));
+    setPhotoPreviews((prev) => ({ ...prev, [msgId]: URL.createObjectURL(squared) }));
   };
 
   const handleSaveRecipe = async (msg: ChatMessage) => {
@@ -132,10 +136,7 @@ function ChatPageInner() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">AIレシピ相談</h2>
-          <p className="text-sm text-gray-500 mt-0.5">自分が作ったことのある適当レシピを、AIと話しながら登録できます</p>
-        </div>
+        <PageHeader title="AIレシピ相談" subtitle="自分が作ったことのある適当レシピを、AIと話しながら登録できます" />
         <Button variant="secondary" size="sm" onClick={handleNewSession}>
           <RotateCcw size={14} />
           新しい相談を始める

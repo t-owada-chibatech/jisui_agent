@@ -1,4 +1,7 @@
+"use client";
 import { clsx } from "clsx";
+import { useDashboardTheme } from "@/lib/theme/ThemeContext";
+import { themeTokens } from "@/lib/theme/tokens";
 
 interface CardProps {
   children: React.ReactNode;
@@ -6,8 +9,13 @@ interface CardProps {
 }
 
 export function Card({ children, className }: CardProps) {
+  const { theme } = useDashboardTheme();
+  const t = themeTokens[theme];
   return (
-    <div className={clsx("bg-white rounded-xl shadow-sm border border-gray-100 p-4", className)}>
+    <div
+      className={clsx("p-4", className)}
+      style={{ background: t.cardBg, border: t.cardBorder, borderRadius: t.cardRadius, boxShadow: t.cardShadow }}
+    >
       {children}
     </div>
   );
@@ -22,8 +30,13 @@ export function CardHeader({ children, className }: CardProps) {
 }
 
 export function CardTitle({ children, className }: CardProps) {
+  const { theme } = useDashboardTheme();
+  const t = themeTokens[theme];
   return (
-    <h3 className={clsx("text-sm font-semibold text-gray-700", className)}>
+    <h3
+      className={clsx("text-sm font-semibold", className)}
+      style={{ color: t.cardTitleColor, fontFamily: t.headingFont }}
+    >
       {children}
     </h3>
   );

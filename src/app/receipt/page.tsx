@@ -9,6 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/auth/useSession";
 import { ReceiptDraft, ReceiptItemDraft, ReceiptItemCategory } from "@/types";
@@ -229,12 +230,7 @@ export default function ReceiptPage() {
 
   return (
     <div className="space-y-5 max-w-2xl">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">レシート取込</h2>
-        <p className="text-sm text-gray-500 mt-0.5">
-          レシート画像をアップロードして、食材を一括登録します
-        </p>
-      </div>
+      <PageHeader title="レシート取込" subtitle="レシート画像をアップロードして、食材を一括登録します" />
 
       {error && (
         <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm">
